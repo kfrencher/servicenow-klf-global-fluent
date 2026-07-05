@@ -1,0 +1,175 @@
+/**
+ * @todo This object is broken right now. Remove the ts-nocheck and fix the issues.
+ */
+var global = global || {};
+
+/**
+ * Object that can be used to transfer data from one scope to another.
+ * @param {global.KLF_ScoperUtils} scoper 
+ */
+global.KLF_ScoperUtils_DataMigrator = function(scoper) {
+    this.scoper = scoper;
+};
+
+global.KLF_ScoperUtils_DataMigrator.prototype = {
+    /**
+     * Checks the table map to make sure that the source and target table name is valid.
+     * Throws an error if the source table name is not found.
+     * @param {string} tableName 
+     */
+    checkTable: function(tableName) {
+        var source = new GlideRecord(tableName);
+        if (!source.isValid()) {
+            throw 'Source table not found for ' + tableName;
+        }
+        var target = new GlideRecord(this.scoper.tableMap[tableName]);
+        if (!target.isValid()) {
+            throw 'Target table not found for ' + tableName;
+        }
+    },
+
+    /**
+     * Transfers all tables from the source scope to the target scope.
+     * @param {{tableName: string, encodedQueryString: string}[]} tables 
+     */
+    transferTables: function(tables) {
+        var me = this;
+        tables.forEach(function(table) {
+            me.transferTable(table.tableName, table.encodedQueryString);
+        });
+    },
+
+    /**
+     * Transfers a single record from the source scope to the target scope.
+     * @param {GlideRecord} source
+     */
+    transferRecord: function(source) {
+        // Check to make sure there is a target table
+        if (!this.scoper.tableMap[source.getRecordClassName()]) {
+            throw 'No target table found for ' + source.getRecordClassName();
+        }
+
+        this.checkTable(source.getRecordClassName());
+
+        var targetParts = this.scoper.copyData(source);
+        var updatedXml = this.scoper.getUpdatedXml(targetParts.targetRecordDocument);
+        // @ts-ignore
+        var updateManager = new global.GlideUpdateManager2();
+        updateManager.loadXML(updatedXml);
+
+    },
+
+    /**
+     * Transfers a table from the source scope to the target scope.
+     * @param {string} tableName 
+     * @param {string} [encodedQueryString]
+     */
+    transferTable: function(tableName, encodedQueryString) {
+        this.checkTable(tableName);
+        var source = new GlideRecord(tableName);
+        if (encodedQueryString) {
+            source.addEncodedQuery(encodedQueryString);
+        }
+        source.query();
+        while (source.next()) {
+            this.transferRecord(source);
+        }
+    },
+
+    /**
+     * Adds the record's related journal entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addJournalEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var journal = new GlideRecord("sys_journal_field");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        journal.addQuery("name", parent.getRecordClassName());
+        journal.addQuery("element_id", parent.getUniqueValue());
+        journal.query();
+        while (journal.next()) {
+            manifest.addRecordByGlideRecord(journal);
+            this.unloadRecord(journal, document);
+        }
+        return manifest;
+    },
+
+    /**
+     * Unloads a record from the update set
+     * @param {GlideRecord} gr
+     * @param {Document} document
+     */
+    unloadRecord: function(gr, document) {
+        throw 'unloadRecord method not implemented';
+    },
+
+    /**
+     * Adds the record's related audit entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addAuditEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var audit = new GlideRecord("sys_audit");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        audit.addQuery("tablename", parent.getRecordClassName());
+        audit.addQuery("documentkey", parent.getUniqueValue());
+        audit.query();
+        while (audit.next()) {
+            manifest.addRecordByGlideRecord(audit);
+            this.unloadRecord(audit, document);
+        }
+        return manifest;
+    },
+
+    /**
+     * Adds the record's related currency entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addCurrencyEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var currency = new GlideRecord("fx_currency_instance");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        currency.addQuery("table", parent.getRecordClassName());
+        currency.addQuery("id", parent.getUniqueValue());
+        currency.query();
+        while (currency.next()) {
+            manifest.addRecordByGlideRecord(currency);
+            this.unloadRecord(currency, document);
+        }
+        return manifest;
+    },
+
+    /**
+     * Adds the record's related currency entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addPriceEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var price = new GlideRecord("fx_price");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        price.addQuery("table", parent.getRecordClassName());
+        price.addQuery("id", parent.getUniqueValue());
+        price.query();
+        while (price.next()) {
+            manifest.addRecordByGlideRecord(price);
+            this.unloadRecord(price, document);
+        }
+        return manifest;
+    },
+};

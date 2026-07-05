@@ -1,0 +1,351 @@
+// @ts-ignore
+function KLF_AtfAddStepsHelperTest(outputs, steps, params, stepResult, assertEqual) {
+    var atfAddStepsHelper = global.KLF_AtfAddStepsHelper;
+
+    /**
+     * Returns the number of steps in a test
+     * @param {string} testSysId sys_atf_test.sys_id
+     * @returns {number}
+     */
+    function getStepCount(testSysId) {
+        var stepGr = new GlideRecord('sys_atf_step');
+        stepGr.addQuery('test', testSysId);
+        stepGr.query();
+        return stepGr.getRowCount();
+    }
+
+    /**
+     * Returns the number of steps in a test using the test name
+     * @param {string} testName sys_atf_test.name
+     * @returns {number}
+     */
+    function getStepCountByName(testName) {
+        var stepGr = new GlideRecord('sys_atf_step');
+        stepGr.addQuery('test.name', testName);
+        stepGr.query();
+        return stepGr.getRowCount();
+    }
+
+    /**
+     * Returns an unsaved sys_atf_test record with the
+     * sys_atf_test.name filled in
+     * @param {string} name sys_atf_test.name Name of the test
+     * @param {global.KLF_TestUtils} testUtils
+     * @returns {GlideRecord} Unsaved sys_atf_test
+     */
+    function createTest(name, testUtils) {
+        var test = new GlideRecord('sys_atf_test');
+        test.newRecord();
+        test.name = name;
+        testUtils.recordTracker.trackByGlideRecord(test);
+
+        return test;
+
+    }
+
+    /**
+     * @typedef {Object} StepData
+     * @property {string} testSysId sys_atf_test.sys_id The parent test
+     * @property {string} stepConfigId sys_atf_step_config.sys_id The related step config
+     */
+    /**
+     * Returns an unsaved sys_atf_step record that is a child
+     * of the sys_atf_test.sys_id passed in.
+     * @param {StepData} stepData
+     * @param {global.KLF_TestUtils} testUtils
+     */
+    function createStep(stepData, testUtils) {
+        var step = new GlideRecord('sys_atf_step');
+        step.newRecord();
+        step.test = stepData.testSysId;
+        step.step_config = stepData.stepConfigId;
+        testUtils.recordTracker.trackByGlideRecord(step);
+        return step;
+    }
+
+    /**
+     * Returns the retrieved sys_atf_step_config GlideRecord
+     * @param {string} name sys_atf_step_config.name
+     * @returns {GlideRecord} sys_atf_step_config
+     */
+    function getStepConfigByName(name) {
+        var stepConfig = new GlideRecord('sys_atf_step_config');
+        if (stepConfig.get('name', name)) {
+            return stepConfig;
+        } else {
+            throw 'Could not find step config using step config name: ' + name;
+        }
+    }
+
+    describe(' - ', function() {
+        /** @type {global.KLF_TestUtils} */
+        var beforeAllTestUtils;
+
+        beforeAll(function() {
+            beforeAllTestUtils = new global.KLF_TestUtils();
+        });
+
+        afterAll(function() {
+            beforeAllTestUtils.cleanup();
+        });
+
+        describe('addTestSteps()', function() {
+            /** @type {GlideRecord} */
+            var test1;
+            /** @type {GlideRecord} */
+            var test2;
+
+            beforeAll(function() {
+                // Creating a test1 with two steps
+                test1 = createTest('test1', beforeAllTestUtils);
+                test1.update();
+                [
+                    createStep({
+                        testSysId: test1.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test1.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils)
+                ].forEach(function(step) {
+                    step.update();
+                });
+
+                // Creating a test2 with one step
+                test2 = createTest('test2', beforeAllTestUtils);
+                test2.update();
+                createStep({
+                    testSysId: test2.getUniqueValue(),
+                    stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                }, beforeAllTestUtils).update();
+            });
+
+            it('Should add steps to a test', function() {
+                // Adding 2 steps to test1
+                // test1 has 2 steps
+                // test2 has 1 step
+                // after adding 2 steps to test2, test2 should have 3 steps
+                atfAddStepsHelper.addTestSteps(test1.getUniqueValue(), test2.getUniqueValue());
+                expect(getStepCount(test1.getUniqueValue())).toBe(2, 'Test 1 should have 2 steps');
+                expect(getStepCount(test2.getUniqueValue())).toBe(3, 'Test 2 should have 3 steps');
+            });
+        });
+
+        describe('getMaxStepOrder()', function() {
+            /** @type {GlideRecord} */
+            var test;
+
+            beforeAll(function() {
+                // Creating a test with three steps and getting the max
+                // order number. Should be 3 because there are 3 steps
+                test = createTest('test1', beforeAllTestUtils);
+                test.update();
+                [
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils)
+                ].forEach(function(step) {
+                    step.update();
+                });
+            });
+
+            it('Should return the max order number', function() {
+                var maxStepOrder = atfAddStepsHelper.getMaxStepOrder(test.getUniqueValue());
+                expect(maxStepOrder).toBe(3, 'Max step order should be 3');
+            });
+        });
+
+        describe('deleteTest()', function() {
+            /** @type {GlideRecord} */
+            var test;
+
+            beforeAll(function() {
+                // Creating a test with three steps and then deleting it
+                test = createTest('test1', beforeAllTestUtils);
+                test.update();
+                [
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils)
+                ].forEach(function(step) {
+                    step.update();
+                });
+            });
+
+            it('Should delete the test and all of its steps', function() {
+                atfAddStepsHelper.deleteTest(test.getUniqueValue());
+                expect(getStepCount(test.getUniqueValue())).toBe(0, 'Test should have 0 steps');
+            });
+        });
+
+        describe('moveSteps()', function() {
+            /** @type {GlideRecord} */
+            var fromTest;
+            /** @type {GlideRecord} */
+            var logConfig;
+
+            beforeAll(function() {
+
+                // Creating a test with a couple steps in it. The moved
+                // steps should be removed from one test and added to
+                // another test
+                fromTest = createTest('test1', beforeAllTestUtils);
+                fromTest.update();
+                logConfig = getStepConfigByName('Log');
+                [
+                    createStep({
+                        testSysId: fromTest.getUniqueValue(),
+                        stepConfigId: logConfig.getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: fromTest.getUniqueValue(),
+                        stepConfigId: logConfig.getUniqueValue()
+                    }, beforeAllTestUtils)
+                ].forEach(function(step) {
+                    step.update();
+                });
+            });
+
+
+            it('Should move steps from one test to another', function() {
+                // Creating a test to move the steps to
+                // Initially should have no steps
+                var toTest = createTest('test2', beforeAllTestUtils);
+
+                var expectedStepCount = 2;
+                atfAddStepsHelper.moveSteps(fromTest.getUniqueValue(), toTest.getUniqueValue());
+
+                // Checking to see that the from test has no steps
+                expect(getStepCount(fromTest.getUniqueValue())).toBe(0, 'From test should have 0 steps');
+
+                // Checking to see that the to test has the correct amount of steps
+                expect(getStepCount(toTest.getUniqueValue())).toBe(2, 'To test should have 2 steps');
+
+                var step = new GlideRecord('sys_atf_step');
+                step.addQuery('test', toTest.getUniqueValue());
+                step.query();
+
+                while (step.next()) {
+                    // Checking to see that the step config is correct
+                    expect(step.getValue('step_config')).toBe(logConfig.getUniqueValue(), 'Step config is correct');
+                }
+            });
+        });
+
+        describe('copyTest()', function() {
+            /** @type {GlideRecord} */
+            var test;
+            /** @type {GlideRecord} */
+            var logConfig;
+
+            beforeAll(function() {
+                // Creating a test with a couple steps in it. The copied
+                // test should be a new test instance with matching test
+                // steps
+                test = createTest('test1', beforeAllTestUtils);
+                test.update();
+                logConfig = getStepConfigByName('Log');
+                [
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: logConfig.getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: logConfig.getUniqueValue()
+                    }, beforeAllTestUtils)
+                ].forEach(function(step) {
+                    step.update();
+                });
+            });
+
+
+            it('Should create copy of a test including all steps', function() {
+                var expectedStepCount = 2;
+                var expectedStepConfig = logConfig;
+                var testCopySysId = atfAddStepsHelper.copyTest(test.getUniqueValue());
+                var testCopy = new GlideRecord('sys_atf_test');
+
+                // Checking to see the test copy exists
+                expect(testCopy.get(testCopySysId)).toBe(true, 'Test copy exists');
+
+                var step = new GlideRecord('sys_atf_step');
+                step.addQuery('test', testCopy.getUniqueValue());
+                step.query();
+
+                // Checking to see there are the right amount of steps
+                expect(step.getRowCount()).toBe(expectedStepCount, 'Test copy should have 2 steps');
+
+                while (step.next()) {
+                    // Checking to see that the step config is correct
+                    expect(step.getValue('step_config')).toBe(logConfig.getUniqueValue(), 'Step config is correct');
+                }
+            });
+        });
+
+        describe('updateStepOrder()', function() {
+            /** @type {GlideRecord} */
+            var test;
+
+            beforeAll(function() {
+                // Creating a test with three steps 
+                // The order in the three steps should initially be
+                // 1, 2, 3. I'm then updating that order to a number
+                // greater than 3, so we expect the order to start with
+                // the new start order
+                test = createTest('test1', beforeAllTestUtils);
+                test.update();
+                [
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils),
+                    createStep({
+                        testSysId: test.getUniqueValue(),
+                        stepConfigId: getStepConfigByName('Log').getUniqueValue()
+                    }, beforeAllTestUtils)
+                ].forEach(function(step) {
+                    step.update();
+                });
+            });
+
+            it('should update the order in all steps', function() {
+                var expectedOrderStart = 10;
+                atfAddStepsHelper.updateStepOrder(test.getUniqueValue(), expectedOrderStart);
+
+                var step = new GlideRecord('sys_atf_step');
+                step.addQuery('test', test.getUniqueValue());
+                step.query();
+                var expectedOrder = expectedOrderStart;
+                while (step.next()) {
+                    expectedOrder = expectedOrder + 1;
+                    expect(parseInt(step.getValue('order'))).toBe(expectedOrder, 'Step order is correct');
+                }
+            });
+        });
+
+    });
+}

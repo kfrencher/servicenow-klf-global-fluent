@@ -1,0 +1,354 @@
+/**
+ * This script implements some enhancements to the Service Portal.
+ * 
+ * - applyGlideRecordTemplate - Applies a sys_template to a ServicePortal form to easily populate fields
+ * - getActivityEntries - Enhances the Ticket Conversations widget by providing a complete list of activities.
+ * By default, the widget only shows comments and work notes. This function provides the same list of activities
+ * that are displayed in platform UI.
+ * - getSPClientUIActions - This is used to display client actions in ServicePortal. Retrieves all the client actions for a table.
+ * By default, ServicePortal will only display server side UI actions. This function retrieves client side UI actions that are
+ * configured to be displayed on a ServicePortal view.
+ * - setRedirectURL - Used in the form widget in ServicePortal to provide a redirect URL. This is to provide some standardization on
+ * how routing is performed in ServicePortal after a UI Action is executed.
+ */
+// @ts-ignore 
+var global = global || {};
+/**
+ * @class global.KLF_SPUtils
+ * contains utility functions
+ */
+function KLF_SPUtils() {}
+KLF_SPUtils.prototype = {
+    /**
+     * Applies a sys_template to a ServicePortal form
+     * @param {string} templateName The name of the sys_template to apply
+     * @param {*} spForm The form returned from $sp.getForm
+     */
+    applyGlideRecordTemplate: function(templateName, spForm) {
+        var template = new GlideRecord('sys_template');
+        if (template.get('name', templateName)) {
+            var gr = new GlideRecord(spForm.table);
+            gr.applyTemplate(templateName);
+            var fields = spForm._fields;
+
+            Object.keys(fields).filter(function(fieldName) {
+                return !!gr.getValue(fieldName);
+            }).forEach(function(fieldName) {
+                var field = fields[fieldName];
+                if (field.value) return; // Don't overwrite existing values
+                if (field.type == 'boolean') {
+                    var booleanValue = gr.getValue(fieldName) == '1' ? 'true' : 'false';
+                    field.value = booleanValue;
+                    field.displayValue = booleanValue;
+                } else {
+                    field.value = gr.getValue(fieldName);
+                    field.displayValue = gr.getDisplayValue(fieldName);
+                }
+            });
+
+            // Apply dot walked values
+            // Be careful with these. Dot walked values are skipped in the default behavior
+            // I still wanted these to apply though. If you aren't careful you can mistakenly
+            // overwrite values in reference field tables
+            var nameValueStrings = template.getValue('template').split('^');
+            var nameValuePairs = nameValueStrings.map(function(nameValueString) {
+                return nameValueString.split('=');
+            });
+            var dotWalkedPairs = nameValuePairs.filter(function(nameValuePair) {
+                return nameValuePair[0].indexOf('.') >= 0;
+            });
+            dotWalkedPairs.forEach(function(nameValuePair) {
+                var field = fields[nameValuePair[0]];
+                field.value = nameValuePair[1];
+                field.displayValue = nameValuePair[1];
+            });
+        }
+    },
+
+    /**
+     * substitute call for $sp.getStream. For some reason $sp.getStream was returning a
+     * NullPointerException in Rome, so I replaced it with an equivalent call. This is used
+     * in the snb-ticket-conversation widget
+     * @param {string} tableName
+     * @param {string} sysId
+     * @returns {Object}
+     */
+    getStream: function(tableName, sysId) {
+        var gr = new GlideRecord(tableName);
+        if (gr.get(sysId)) {
+            return {
+                "display_ value": gr.getDisplayValue(),
+                "sys_id": sysId,
+                "number": gr.getValue('number'),
+                "entries": [],
+                "user sys_id": gs.getUserID(),
+                "user full_name": gs.getUserDisplayName(),
+                "user login": gs.getUserName(),
+                "label": gr.getlabel(),
+                "table": tableName,
+                "journal_flelds": [{
+                    "can_read ": true,
+                    "color": "gold",
+                    "can_write": true,
+                    "name": "work_notes",
+                    "label": "Work Notes"
+                }]
+            };
+        } else {
+            return {};
+        }
+    },
+    /**
+     * Returns a list of field names that have changed on a record
+     * @param {GlideRecord} glideRecord Record to find changed field names
+     * @returns {string[]} List of field names that have changed
+     */
+    getChangedFieldNames: function(glideRecord) {
+        var elements = new global.ArrayUtil().convertArray(glideRecord.getElements());
+        return elements.filter(function(element) {
+            return element.changes();
+        }).map(function(element) {
+            return element.getName();
+        });
+    },
+    /**
+     * @typedef ChangeRecord
+     * Represents the set of changes for 1 update of a record. Each field changed
+     * is stored in the changes array.
+     * @property {string} sys_updated_on
+     * @property {string} sys_updated_by
+     * @property { object[]} changes
+     * @property {string} changes[].fieldName Name of the field that changed
+     * @property {string} changes[].fieldLabel Label of the field that changed
+     * @property {string} changes[].currentValue Current value of the field that changed
+     * @property {string} changes[].currentDisplayValue Current display value of the field that changed
+     * @property {string} changes[].previousValue Previous value of the field that changed
+     * @property {string} changes[].previousDisplayValue Previous display value of the field that changed
+     */
+    /**
+     *
+     * @param {string} tableName Name of table to retrieve history
+     * @param {string} sysId sys_id of record to retrieve history
+     * @returns {ChangeRecord[]}
+     */
+    getHistory: function(tableName, sysId) {
+        //@ts-ignore
+        var walker = new sn_hw.HistoryWalker(tableName, sysId);
+        walker.walkBackward();
+        var current = walker.getWalkedRecordCopy();
+        /** @type {GlideRecord} */
+        var previous;
+        var history = [];
+        while (walker.walkBackward()) {
+            previous = walker.getWalkedRecordCopy();
+            var changedFieldNames = this.getChangedFieldNames(current);
+            var changes = changedFieldNames.map(function(fieldName) {
+                return {
+                    fieldName: fieldName,
+                    fieldLabel: current[fieldName].getLabel(),
+                    currentValue: current.getValue(fieldName),
+                    currentDisplayValue: current.getDisplayValue(fieldName),
+                    previousValue: previous.getValue(fieldName),
+                    previousDisplayValue: previous.getDisplayValue(fieldName)
+                };
+            });
+            var changeRecord = {
+                sys_updated_on: current.getValue('sys_updated_on'),
+                sys_updated_by: current.getDisplayValue('sys_updated_by'),
+                changes: changes
+            };
+            history.push(changeRecord);
+            current = previous;
+        }
+        return history;
+    },
+    /**
+    @typedef Activity
+    Represents an object that can be displayed as an entry in the Ticket Conversations widget
+    The widget requires a set of properties to be filled in to render the entry correctly. You can see how
+    * these properties are used by looking at the HTML Template section. The list is stored in "data.mergedEntries".
+    * @property {string} element Type of activity: attachment,. field_changes, comments, work_notes
+    * @property {string} field_label Display value of the type of activity
+    * @property {string} value A description of the activity that happened
+    * @property {string} name The label of the activity
+    * @property {string} user_sys_id sys_id from sys_user
+    * @property {string} sys_created_on Date when activity happened
+    */
+    /**
+     * Gets a list of entries that can be rendered in the "Ticket Conversations" widget. This function
+     * is called in the "Server Script" to help populate the list of entries that are displayed
+     * @param {ChangeRecord[]} history
+     * @param {string} tableName
+     * @returns {Activity[]} A list of activities that can be displayed in the "Ticket Conversations" widget
+     */
+    getActivityEntries: function(history, tableName) {
+        var configuredActivityFieldString = gs.getProperty('glide.ui.' + tableName + '_activity.fields');
+        var activityFields = configuredActivityFieldString ? configuredActivityFieldString.split(',') : ['status'];
+        return history.map(function(changeRecord) {
+            function getUser( /** @type {string}**/ username) {
+                var user = new GlideRecord('sys_user');
+                if (user.get('user_name', username)) {
+                    return user;
+                } else {
+                    return null;
+                }
+            }
+            var changes = changeRecord.changes;
+            var changelines = changes.filter(function(change) {
+                return activityFields.indexOf(change.fieldName) >= 0;
+            }).map(function(change) {
+                return '<span style="display: inline-block; margin-right: 10px;">' + change.fieldLabel + ':</span>' + change.currentDisplayValue + ' was ' +
+                    change.previousDisplayValue;
+            });
+            var summary = changelines.join(' <br/>');
+            var user = getUser(changeRecord.sys_updated_by) || null;
+            var createdAdjusted = '';
+            if (changeRecord.sys_updated_on) {
+                var createdDate = new GlideDateTime(changeRecord.sys_updated_on);
+                createdAdjusted = createdDate.getLocalDate().getByFormat('YYYY-MM-dd') + '' +
+                    createdDate.getLocalTime().getByFormat('HH:mm:ss');
+            }
+            return {
+                element: 'field_ changes',
+                field_label: 'Field Changes',
+                value: summary,
+                name: user ? user.getDisplayValue() : changeRecord.sys_updated_by,
+                user_sys_id: user ? user.getUniqueValue() : '',
+                sys_created_on: changeRecord.sys_updated_on,
+                sys_created_on_adjusted: createdAdjusted
+            };
+        }).filter(function(entry) {
+            return entry.value;
+        });
+    },
+    /**
+     * Retrieves all the client actions for a table. This is used to display client actions in ServicePortal.
+     * This will only retrieve client actions that are configured to be displayed on a ServicePortal view
+     * by configuring the "UI Action Visibility" of the UI Action. Setting the view to "Service Portal" and
+     * "Visibility" to "Include". Result of this function is used in data.f._ui_actions list in form widget
+     * @param {string} tableName Name of table to retrieve actions
+     * @param {GlideRecord} current GlideRecord used to evaluate conditions against
+     * @param {string} [viewName=sp]
+     * @param {SPAction[]} [actions] Not needed. This is used as an accumulator in recursive calls
+     * @returns {SPAction[]} A list of SPAction objects that can be displayed in the Form widget
+     */
+    getSPClientUIActions: function(tableName, current, viewName, actions) {
+        var uiView = new GlideRecord('sys_ui_view');
+        viewName = viewName || 'sp';
+        if (!uiView.get('name', viewName)) {
+            gs.error('Utils.getSPClientUIActions - could not find Service Portal view');
+            return [];
+        }
+        var actionGr = new GlideRecord('sys_ui_action');
+        actionGr.addQuery('client', true);
+        actionGr.addQuery('active', true);
+        //filter for only client side UI actions with an UI Action Visibility of Service Portal
+        actionGr.addJoinQuery('sys_ui_action_view', 'sys_id', 'sys_ui_action')
+            .addCondition('sys_ui_ view', uiView.getUniqueValue());
+        actionGr.addQuery('table', tableName);
+        actionGr.query();
+        actions = actions || [];
+        var evaluator = new GlideScopedEvaluator();
+        while (actionGr.next()) {
+            var include = evaluator.evaluateScript(actionGr, 'condition', {
+                current: current
+            });
+            //if the action already exists then the action in the parent table
+            //has been overridden in the extension table
+            var actionExists = actions.filter(function(action) {
+                return action.action_name == actionGr.getValue('action_name');
+            }).length > 0;
+            if (include && !actionExists) {
+                actions.push({
+                    sys_id: actionGr.getUniqueValue(),
+                    action_name: actionGr.getValue('action_name'),
+                    form_style: actionGr.getValue('form_style'),
+                    hint: actionGr.getValue('hint'),
+                    is_button: Boolean(actionGr.form_button),
+                    is_context: Boolean(actionGr.form_context_menu),
+                    is_link: Boolean(actionGr.form_link),
+                    is_custom: true,
+                    display_order: parseInt(actionGr.getValue('order')) || 100,
+                    name: actionGr.getValue('name'),
+                    fn: actionGr.getValue('script'),
+                    onclick: actionGr.getValue('onclick'),
+                    is_client: Boolean(actionGr.client)
+                });
+            }
+        }
+        var dbRecord = new GlideRecord('sys_db_object');
+        if (dbRecord.get('name', tableName) && !dbRecord.super_class.nil()) {
+            var superDbRecord = dbRecord.super_class.getRefRecord();
+            var superTableName = superDbRecord.getValue('name');
+            return this.getSPClientUIActions(superTableName, current, viewName, actions);
+        } else {
+            return actions;
+        }
+    },
+    /**
+     * This goes through the set of SPActions and applies the view rules
+     * so included and excluded actions are displayed properly in Service Portal
+     * @param {SPAction[]} spActions
+     * @param {string} viewName
+     * @returns {SPAction[]}
+     */
+    filterForSPActionsInView: function(spActions, viewName) {
+        var view = new GlideRecord('sys_ui_view');
+        var viewSysId = (viewName && view.get('name', viewName)) ? view.getUniqueValue() : '';
+        return spActions.filter(function(spAction) {
+            // Look for include rule first
+            // If the sys_ui_action has the view on the list than include it
+            var includeViewRule = new GlideRecord('sys_ui_action_view');
+            includeViewRule.addQuery('sys_ui_action', spAction.sys_id);
+            includeViewRule.addQuery('visibility', 'Include');
+            includeViewRule.addQuery('sys_ui_view', viewSysId);
+            includeViewRule.query();
+            if (includeViewRule.getRowCount() > 0) {
+                return true;
+            }
+            // Now look for exclude rule
+            // If the sys_ui_action has the view on the exclude list than exclude it
+            var excludeViewRule = new GlideRecord('sys_ui_action_view');
+            excludeViewRule.addQuery('sys_ui_action', spAction.sys_id);
+            excludeViewRule.addQuery('visibility', 'Exclude');
+            excludeViewRule.addQuery('sys_ui_view', viewSysId);
+            excludeViewRule.query();
+            if (excludeViewRule.getRowCount() > 0) {
+                return false;
+            }
+            // Wasn't on an include or exclude list, so check to see if we have
+            // an include list. If there was an include list then we know this view
+            // isn't on it so exclude it. Otherwise either there isn't a list or
+            // this view isn't on the exclude list so include it
+            var hasIncludeViewRule = new GlideRecord('sys_ui_action_view');
+            hasIncludeViewRule.addQuery('sys_ui_action', spAction.sys_id);
+            hasIncludeViewRule.addQuery('visibility', 'Include');
+            hasIncludeViewRule.query();
+            return hasIncludeViewRule.getRowCount() === 0; // Including if we don't have any include view rules
+        });
+    },
+    /**
+     * @callback getUrl
+     * @returns {string} A URL to be used
+     */
+    /**
+     * Used in the form widget in ServicePortal to provide a redirect URL. This is used
+     * in combination with a UI action. The UI action sys_id is used as a key in the user
+     * session to store a redirect URL that is picked up by the client after the UI action
+     * executes
+     * @param {string} actionSysId sys_id of a UI Action
+     * @param {getUrl} getUrl function used to generate URL
+     */
+    setRedirectURL: function(actionSysId, getUrl) {
+        var session = gs.getSession();
+        session.putClientData(actionSysId, JSON.stringify({
+            redirectUrl: getUrl()
+        }));
+    },
+
+    /** !Important: This field must be at the bottom of this object */
+    /** @type {'KLF_SPUtils'} */
+    type: 'KLF_SPUtils'
+};
+
+global.KLF_SPUtils = KLF_SPUtils;

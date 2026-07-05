@@ -1,0 +1,221 @@
+// @ts-ignore
+function KLF_RecordSyncTest_ManifestTest(outputs, steps, params, stepResult, assertEqual) {
+    describe('addRecord()/getSysIdsForTable()', function() {
+        it('should add a record', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecord('task', '1');
+            expect(manifest.getSysIdsForTable('task')).toBeEqual(['1'], 'Should have 1 task record');
+
+            manifest.addRecord('task', '2');
+            expect(manifest.getSysIdsForTable('task')).toBeEqual(['1', '2'], 'Should have 2 task records');
+
+            manifest.addRecord('incident', '3');
+            expect(manifest.getSysIdsForTable('incident')).toBeEqual(['3'], 'Should have 1 incident record');
+        });
+
+        it('should not add duplicate records', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecord('task', '1');
+            manifest.addRecord('task', '1');
+            expect(manifest.getSysIdsForTable('task')).toBeEqual(['1'], 'Should have 1 task record');
+        });
+
+        it('should not add records with empty sys_id', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecord('task', '');
+            expect(manifest.getSysIdsForTable('task')).toBeEqual([], 'Should have no task records');
+        });
+    });
+
+    describe('getTables()', function() {
+        it('should return a list of tables', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecord('task', '1');
+            manifest.addRecord('incident', '2');
+            manifest.addRecord('incident', '3');
+            expect(manifest.getTables().sort()).toBeEqual(['task', 'incident'].sort(), 'Should have 2 tables');
+        });
+
+        it('should return an empty list if there are no tables', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            expect(manifest.getTables()).toBeEqual([], 'Should have no tables');
+        });
+    });
+
+    describe('addRecords()', function() {
+        it('should add records from an object', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecords('task', ['1', '2']);
+            manifest.addRecords('incident', ['2', '3']);
+            expect(manifest.getSysIdsForTable('task').sort()).toBeEqual(['1', '2'], 'Should have 2 task records');
+            expect(manifest.getSysIdsForTable('incident').sort()).toBeEqual(['2', '3'], 'Should have 2 incident records');
+        });
+
+        it('should not add records with empty sys_id', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecords('task', ['1', '']);
+            expect(manifest.getSysIdsForTable('task')).toBeEqual(['1'], 'Should have 1 task record');
+        });
+    });
+
+    describe('addRecordByGlideRecord()', function() {
+        it('should add records from a GlideRecord', function() {
+            var task1 = new GlideRecord('task');
+            task1.newRecord();
+
+            var task2 = new GlideRecord('task');
+            task2.newRecord();
+
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecordByGlideRecord(task1);
+            manifest.addRecordByGlideRecord(task2);
+
+            expect(manifest.getSysIdsForTable('task').sort()).toBeEqual([task1.getUniqueValue(), task2.getUniqueValue()].sort(), 'Should have 2 task records');
+        });
+
+        it('should not add records with empty sys_id', function() {
+            var task = new GlideRecord('task');
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecordByGlideRecord(task);
+            expect(manifest.getSysIdsForTable('task')).toBeEqual([], 'Should have no task records');
+        });
+
+        it('should not add records with invalid table', function() {
+            var invalidGr = new GlideRecord('my_invalid_table');
+            var manifest = new global.KLF_RecordSync.Manifest();
+            expect(function() {
+                manifest.addRecordByGlideRecord(invalidGr);
+            }).toThrow('Invalid GlideRecord with table name: my_invalid_table');
+        });
+    });
+
+    describe('addManifest()', function() {
+        it('should add records from another manifest', function() {
+            var manifest1 = new global.KLF_RecordSync.Manifest();
+            manifest1.addRecord('task', '1');
+            manifest1.addRecord('incident', '2');
+
+            var manifest2 = new global.KLF_RecordSync.Manifest();
+            manifest2.addRecord('task', '3');
+            manifest2.addRecord('incident', '4');
+
+            manifest1.addManifest(manifest2);
+
+            expect(manifest1.getSysIdsForTable('task').sort()).toBeEqual(['1', '3'], 'Should have 2 task records');
+            expect(manifest1.getSysIdsForTable('incident').sort()).toBeEqual(['2', '4'], 'Should have 2 incident records');
+        });
+
+        it('should not add records from empty manifest', function() {
+            var manifest1 = new global.KLF_RecordSync.Manifest();
+            var manifest2 = new global.KLF_RecordSync.Manifest();
+            manifest1.addManifest(manifest2);
+            expect(manifest1.getTables()).toBeEqual([], 'Should have no tables');
+        });
+    });
+
+    describe('toObj()', function() {
+        it('should convert manifest to object', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecord('task', '1');
+            manifest.addRecord('task', '2');
+            manifest.addRecord('incident', '3');
+            manifest.addRecord('incident', '4');
+
+            var actualObj = manifest.toObj();
+            expect(actualObj).not.toBeNull();
+            expect(actualObj.task.sort()).toBeEqual(['1', '2'], 'Should have 2 task records');
+            expect(actualObj.incident.sort()).toBeEqual(['3', '4'], 'Should have 2 incident records');
+        });
+
+        it('should return an empty object if there are no records', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            expect(manifest.toObj()).toBeEqual({}, 'Should have no records');
+        });
+
+    });
+
+    describe('validate()', function() {
+        /** @type {global.KLF_TestUtils.RecordTracker} */
+        var recordTracker;
+
+        beforeEach(function() {
+            recordTracker = new global.KLF_TestUtils.RecordTracker();
+        });
+
+        afterEach(function() {
+            recordTracker.deleteAll();
+        });
+
+        it('should return no missing records if all records exist', function() {
+            var task1 = new GlideRecord('task');
+            task1.newRecord();
+            task1.update();
+            recordTracker.trackByGlideRecord(task1);
+
+            var task2 = new GlideRecord('task');
+            task2.newRecord();
+            task2.update();
+            recordTracker.trackByGlideRecord(task2);
+
+            var incident1 = new GlideRecord('incident');
+            incident1.newRecord();
+            incident1.update();
+            recordTracker.trackByGlideRecord(incident1);
+
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecordByGlideRecord(task1);
+            manifest.addRecordByGlideRecord(task2);
+            manifest.addRecordByGlideRecord(incident1);
+
+            var expectedManifest = new global.KLF_RecordSync.Manifest();
+            var actualManifest = manifest.validate();
+
+            expect(actualManifest.toObj()).toBeEqual(expectedManifest.toObj(), 'Should have no missing records');
+        });
+
+        it('should return missing records if some records do not exist', function() {
+            var task1 = new GlideRecord('task');
+            task1.newRecord();
+            task1.update();
+            recordTracker.trackByGlideRecord(task1);
+
+            // Simulate a record that does not exist
+            // intentionally not saving this record to simulate that
+            // it exists on another instance
+            var task2 = new GlideRecord('task');
+            task2.newRecord();
+            recordTracker.trackByGlideRecord(task2);
+
+            var incident1 = new GlideRecord('incident');
+            incident1.newRecord();
+            incident1.update();
+            recordTracker.trackByGlideRecord(incident1);
+
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecordByGlideRecord(task1);
+            manifest.addRecordByGlideRecord(task2);
+            manifest.addRecordByGlideRecord(incident1);
+
+            var expectedManifest = new global.KLF_RecordSync.Manifest();
+            expectedManifest.addRecordByGlideRecord(task2);
+
+            var actualManifest = manifest.validate();
+
+            expect(actualManifest.toObj()).toBeEqual(expectedManifest.toObj(), 'Should have missing record');
+        });
+    });
+
+    describe('isEmpty()', function() {
+        it('should return true when there are no records', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            expect(manifest.isEmpty()).toBe(true, 'Should have no records');
+        });
+
+        it('should return false if there are records', function() {
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecord('task', '1');
+
+            expect(manifest.isEmpty()).toBe(false, 'Should have records');
+        });
+    });
+}

@@ -1,0 +1,652 @@
+/**
+ * This script include provides utility functions for unit testing.
+ * 
+ * Like creating a user, creating a group, deleting records created by a user, impersonating a user etc.
+ * 
+ * It includes functions that allow you to:
+ * - Delete records created by a specific user so that you can clean up after a test
+ * - Run a function as a specific user so that you can test functionality that requires a specific user
+ * - Create a common user that has no roles or groups
+ * - Impersonate the common user
+ * - Create a group, including adding users to the group
+ * - Create a user
+ */
+//@ts-ignore
+var global = global || {};
+
+/**
+ * @typedef {{sysId:string,tableName:string}} KLF_Document
+ */
+
+
+/**
+ * @typedef {{recordTracker?: global.KLF_TestUtils.RecordTracker,adminUsername?:string}} KLF_TestUtilsConfig
+ */
+
+/**
+ * General utility functions for to help with testing using ATF
+ * @class global.KLF_TestUtils
+ * contains utility functions
+ * @param {KLF_TestUtilsConfig} [config]
+ */
+global.KLF_TestUtils = function(config) {
+    var _config = config || /** @type {KLF_TestUtilsConfig} */ ({});
+    this.recordTracker = _config.recordTracker || new global.KLF_TestUtils.RecordTracker();
+    this.adminUsername = _config.adminUsername || gs.getProperty('KLF_TestUtils.admin_username', 'KLF_TestAdminUser');
+};
+
+global.KLF_TestUtils.matchers = {
+    /**
+     * Copied from the jasmine deep equality matcher. The only difference
+     * is that this version allows for an additional message to be provided
+     * so that the message can be more descriptive in the case of a test failure
+     * @param {any} util 
+     * @param {any} customEqualityTesters 
+     */
+    toBeEqual: function(util, customEqualityTesters) {
+        customEqualityTesters = customEqualityTesters || [];
+
+        return {
+            /**
+             * @param {any} actual 
+             * @param {any} expected 
+             * @param {string} [additionalMessage] 
+             * @returns {{pass:boolean,message?:string}}
+             */
+            compare: function(actual, expected, additionalMessage) {
+                var result = {
+                    pass: false,
+                    message: ''
+                };
+
+                // @ts-ignore
+                var diffBuilder = jasmine.DiffBuilder();
+
+                result.pass = util.equals(actual, expected, customEqualityTesters, diffBuilder);
+
+                // TODO: only set error message if test fails
+                var message = diffBuilder.getMessage();
+                if (additionalMessage) {
+                    var formattedAdditionalMessage = "'" + additionalMessage + "'";
+                    result.message = message + ', ' + formattedAdditionalMessage;
+                } else {
+                    result.message = message;
+                }
+
+                return result;
+            }
+        };
+    }
+};
+
+/**
+ * Gets the property or throws an error if the property is not found
+ * @param {string} property - The name of the property to get
+ * @returns {string} The value of the property
+ */
+global.KLF_TestUtils.getProperty = function(property) {
+    var value = gs.getProperty(property);
+    if (!value) {
+        throw new Error('Property ' + property + ' not found');
+    }
+    return value;
+};
+
+/**
+ * Used to keep track of records that are created. This is useful for cleaning up after tests
+ * Has the ability to delete the records after the test is done
+ */
+global.KLF_TestUtils.RecordTracker = function() {
+    /** @type {KLF_Document[]} */
+    this.documents = [];
+    /** @type {{[tableSysId:string]:boolean}} */
+    this.documentIndex = {};
+};
+
+global.KLF_TestUtils.RecordTracker.prototype = {
+
+    /**
+     * Returns the list of tracked documents
+     * @returns {KLF_Document[]}
+     */
+    getDocuments: function() {
+        return this.documents;
+    },
+
+    /**
+     * Returns true if the given GlideRecord is being tracked
+     * @param {GlideRecord} glideRecord
+     */
+    hasGlideRecord: function(glideRecord) {
+        return this.documentIndex[glideRecord.getUniqueValue() + glideRecord.getRecordClassName()] === true;
+    },
+
+    /**
+     * Returns true if the given document is being tracked
+     * @param {KLF_Document} document
+     */
+    hasDocument: function(document) {
+        return this.documentIndex[document.sysId + document.tableName] === true;
+    },
+
+    /**
+     * @param {string} sysId 
+     * @param {string} tableName 
+     */
+    trackBySysId: function(sysId, tableName) {
+        // if it's already being tracked, don't add it again
+        if (this.documentIndex[sysId + tableName]) return this;
+
+        this.documentIndex[sysId + tableName] = true;
+        this.documents.push({
+            sysId: sysId,
+            tableName: tableName
+        });
+        return this;
+    },
+
+    /**
+     * @param {GlideRecord} glideRecord 
+     */
+    trackByGlideRecord: function(glideRecord) {
+        this.trackBySysId(glideRecord.getUniqueValue(), glideRecord.getTableName());
+        return this;
+    },
+
+    /**
+     * Deletes all records that were tracked
+     * @param {boolean} [includeSystemTables] - If true, records from system tables will also be deleted
+     */
+    deleteAll: function(includeSystemTables) {
+        this.documents.forEach(function(doc) {
+            if (!includeSystemTables && doc.tableName.startsWith('sys_')) return;
+            var gr = new GlideRecord(doc.tableName);
+            if (gr.get(doc.sysId)) {
+                gr.deleteRecord();
+            }
+        });
+    }
+};
+
+global.KLF_TestUtils.prototype = {
+
+    /**
+     * Returns true if this script is executing in an ATF context
+     * @returns {boolean}
+     */
+    isAtf: function() {
+        return typeof jasmine === 'object' && typeof describe === 'function';
+    },
+
+    glideRecordUtils: new global.KLF_GlideRecordUtils(),
+
+    /** @type {Chance.Chance} */
+    // @ts-ignore
+    chance: global.KLF_TestChance,
+
+    /**
+     * Uses the chance library to generate a string 
+     * containing only letters
+     * @param {number} [length=10] - The length of the string to generate
+     * @returns {string}
+     */
+    getRandomAlphaNumericString: function(length) {
+        return this.chance.string({
+            length: length || 10,
+            pool: 'abcdefghijklmnopqrstuvwxyz'
+        });
+    },
+
+    /**
+     * Uses the chance library to generate a string that looks
+     * like a username
+     * @returns {string}
+     */
+    getRandomUsername: function() {
+        return this.chance.string({
+            length: 7,
+            pool: 'abcdefghijklmnopqrstuvwxyz'
+        });
+    },
+
+    /**
+     * Uses the chance library to generate a string that looks
+     * like a group name
+     * @returns {string}
+     */
+    getRandomGroupName: function() {
+        return 'KLF_TestGroup_' + this.getRandomUsername();
+    },
+
+    /**
+     * @param {GlideRecord} glideRecord
+     * @returns {GlideRecord}
+     */
+    updateAndTrack: function(glideRecord) {
+        glideRecord.update();
+        this.recordTracker.trackByGlideRecord(glideRecord);
+        return glideRecord;
+    },
+
+    /**
+     * Cleans up all records that were created during the test
+     */
+    cleanup: function() {
+        this.recordTracker.deleteAll();
+    },
+
+    /**
+     * Creates a new RecordTracker instance
+     * @returns {global.KLF_TestUtils.RecordTracker} The newly created RecordTracker instance
+     */
+    createRecordTracker: function() {
+        return new global.KLF_TestUtils.RecordTracker();
+    },
+
+    /**
+     * Deletes records from the given tables that the specified
+     * user has created. Tables can be specified as a string or an array of strings
+     * @param {string} createdBySysId sys_user.sys_id
+     * @param {string|string[]} tableNames The names of the tables to delete records from
+     */
+    deleteRecordsCreatedBy: function(createdBySysId, tableNames) {
+        if (typeof tableNames === 'string') {
+            tableNames = [tableNames];
+        }
+
+        // first i need to transform the createdBySysId sys_user.sys_id
+        //into a sys_user.user_name
+        var createdBy = new GlideRecord('sys_user');
+        if (!createdBy.get(createdBySysId)) {
+            throw new Error('Could not find user with sys_id: ' + createdBySysId);
+        }
+        var createdByUserName = createdBy.getValue('user_name');
+
+        tableNames.forEach(function(tableName) {
+            if (tableName.startsWith('sys_')) {
+                throw new Error('Cannot delete records from system tables');
+            }
+            var gr = new GlideRecord(tableName);
+            if (!gr.isValid()) {
+                throw new Error('Invalid table name: ' + tableName);
+            }
+            gr.addQuery('sys_created_by', createdByUserName);
+            gr.deleteMultiple();
+        });
+    },
+
+    /**
+     * Deletes records from the given tables that the common user
+     * has created. Tables can be specified as a string or an array of strings
+     * @param {string|string[]} tableNames The names of the tables to delete records from
+     */
+    deleteRecordsCreatedByCommonUser: function(tableNames) {
+        var commonUser = this.getCommonUser();
+        if (commonUser === null) {
+            throw new Error('Could not find common user');
+        }
+        this.deleteRecordsCreatedBy(commonUser.getUniqueValue(), tableNames);
+    },
+
+    /**
+     * Executes the given function as the common user and then reverts back to the original user
+     * @param {function} func The function to execute as the given user
+     */
+    runAsCommonUser: function(func) {
+        this.runAsUser(this.createCommonUser().getUniqueValue(), func);
+    },
+
+    /**
+     * Executes the given function as the given user and then reverts back to the original user
+     * @param {string} userSysId The sys_id of the user to impersonate
+     * @param {function} func The function to execute as the given user
+     */
+    runAsUser: function(userSysId, func) {
+        var previousUserSysId = this.impersonateUser(userSysId);
+        try {
+            func();
+        } catch ( /** @type {*} */ e) {
+            gs.error(e);
+        }
+        this.impersonateUser(previousUserSysId);
+    },
+
+    /**
+     * Always returns null to indicate that there is no common user by default.
+     * It was found that user deletion during ATF tests has a significant performance impact.
+     * @returns {?GlideRecord} The sys_user record of the common user or null if it does not exist
+     */
+    getCommonUser: function() {
+        return null;
+    },
+
+    /**
+     * Creates a user with the admin role
+     * @returns {GlideRecord} The newly created sys_user record
+     */
+    createAdminUser: function() {
+        var user = this.createUser(this.adminUsername);
+        this.addRoleToUser(user, 'admin');
+        this.recordTracker.trackByGlideRecord(user);
+        return user;
+    },
+
+    /**
+     * Returns the admin user sys_user record or creates it if it does not exist
+     * @returns {GlideRecord} The sys_user record of the admin user
+     */
+    getOrCreateAdminUser: function() {
+        var user = new GlideRecord('sys_user');
+        if (user.get('user_name', this.adminUsername)) {
+            return user;
+        } else {
+            return this.createAdminUser();
+        }
+    },
+
+    /**
+     * Sets the password for the given user
+     * @param {GlideRecord} user 
+     * @returns {string} The password that was set
+     */
+    setPasswordForUser: function(user) {
+        // @ts-ignore
+        var password = SNC.PasswordPolicyEvaluator.generateUserPassword(user.getValue('user_name'));
+        user.setDisplayValue('user_password', password);
+        user.update();
+        return password;
+    },
+
+    /**
+     * Creates a user with no roles or groups to simulate a common user
+     * @returns {GlideRecord} The newly created sys_user record
+     */
+    createCommonUser: function() {
+        var user = this.createUser(this.getRandomUsername());
+        this.recordTracker.trackByGlideRecord(user);
+        return user;
+    },
+
+    /**
+     * Creates a group with no roles and whose only member is the common user.
+     * If the common user does not exist, it will be created.
+     * @returns {{group:GlideRecord,user:GlideRecord,groupMember:GlideRecord}} The newly created sys_user_group and associated sys_user and sys_user_grmember records
+     */
+    createCommonGroup: function() {
+        var group = this.createGroup(this.getRandomGroupName());
+        var user = this.createUser(this.getRandomUsername());
+        var groupMember = this.addUserToGroup(group, user);
+        return {
+            group: group,
+            user: user,
+            groupMember: groupMember
+        };
+    },
+
+    /**
+     * Retrieves a user that has admin access
+     * @returns {GlideRecord} Some user that has admin access
+     */
+    getAdminUser: function() {
+        var user = new GlideRecord('sys_user');
+        if (user.get('user_name', 'admin')) {
+            return user;
+        } else {
+            throw new Error('Could not find admin user');
+        }
+    },
+
+    /**
+     * Impersonates the admin user and returns the GlideRecord of the admin user
+     * Returns the sys_id of the current user before impersonation
+     * @returns {[GlideRecord, string]} The sys_user record for admin user and the
+     * sys_id of the current user before impersonation
+     */
+    impersonateAdminUser: function() {
+        var adminUser = this.getAdminUser();
+        var currentUser = this.impersonateUser(adminUser.getUniqueValue());
+        return [adminUser, currentUser];
+    },
+
+    /**
+     * Returns the common user sys_user record or creates it if it does not exist
+     * @returns {GlideRecord} The sys_user record of the common user
+     */
+    getOrCreateCommonUser: function() {
+        var user = this.getCommonUser();
+        if (user) {
+            return user;
+        } else {
+            return this.createCommonUser();
+        }
+    },
+
+    /**
+     * Impersonates the admin user
+     * Returns the GlideRecord of the common user that was impersonated
+     * Returns the sys_id of the current user before impersonation
+     * @returns {[GlideRecord, string]} The sys_user record for common user and the
+     * sys_id of the current user before impersonation
+     */
+    impersonateCommonUser: function() {
+        var commonUser = this.getOrCreateCommonUser();
+        var currentUser = this.impersonateUser(commonUser.getUniqueValue());
+        return [commonUser, currentUser];
+    },
+
+    /**
+     * Impersonates the user with the given sys_id
+     * @param {string} userSysId The sys_id of the user to impersonate
+     * @returns {string} The sys_id of the current user before impersonation
+     */
+    impersonateUser: function(userSysId) {
+        var impersonator = new GlideImpersonate();
+        return impersonator.impersonate(userSysId);
+    },
+
+    /**
+     * Returns the role if it already exists or creates it if it does not exist
+     * @param {string} roleName - The name of the role to get or create
+     */
+    getOrCreateRole: function(roleName) {
+        var role = new GlideRecord('sys_user_role');
+        return role.get('name', roleName) ? role : this.createRole(roleName);
+    },
+
+    /**
+     * Creates a new sys_user_role 
+     * @param {string} roleName
+     */
+    createRole: function(roleName) {
+        // Check if the role already exists
+        var role = new GlideRecord('sys_user_role');
+        if (role.get('name', roleName)) {
+            throw new Error('Role already exists');
+        }
+
+        role = new GlideRecord('sys_user_role');
+        role.newRecord();
+        role.name = roleName;
+        role.update();
+        this.recordTracker.trackByGlideRecord(role);
+        return role;
+    },
+
+    /**
+     * Returns the group or creates it if it does not exist
+     * @param {string} groupName 
+     */
+    getOrCreateGroup: function(groupName) {
+        var group = new GlideRecord('sys_user_group');
+        return group.get('name', groupName) ? group : this.createGroup(groupName);
+    },
+
+    /**
+     * Creates a new sys_user_group record
+     * @param {string} groupName - The name of the group to create
+     * @returns {GlideRecord} - The newly created sys_user_group record
+     */
+    createGroup: function(groupName) {
+        // Check if the group already exists
+        var group = new GlideRecord('sys_user_group');
+        if (group.get('name', groupName)) {
+            throw new Error('Group already exists');
+        }
+
+        group = this.glideRecordUtils.insertRecord('sys_user_group', {
+            name: groupName
+        });
+        this.recordTracker.trackByGlideRecord(group);
+        return group;
+    },
+
+    /**
+     * Returns the user or creates it if it does not exist
+     * @param {string} username 
+     */
+    getOrCreateUser: function(username) {
+        var user = new GlideRecord('sys_user');
+        return user.get('user_name', username) ? user : this.createUser(username);
+    },
+
+    /**
+     * Creates a new sys_user record
+     * @param {string} username - The name of the user to create
+     * @returns {GlideRecord} - The newly created sys_user record
+     */
+    createUser: function(username) {
+        // Check if the user already exists
+        var user = new GlideRecord('sys_user');
+        if (user.get('user_name', username)) {
+            throw new Error('User already exists');
+        }
+
+        user = this.glideRecordUtils.insertRecord('sys_user', {
+            user_name: username,
+            first_name: username + 'first',
+            last_name: username + 'last',
+            email: username + '@example.com'
+        });
+        this.recordTracker.trackByGlideRecord(user);
+        return user;
+    },
+
+    /**
+     * Adds a user to a group
+     * @param {GlideRecord} group - The group to add the user to
+     * @param {GlideRecord} user - The user to add to the group
+     * @returns {GlideRecord} The newly created sys_user_grmember record
+     */
+    addUserToGroup: function(group, user) {
+        // Check if the user is already a member of the group
+        var groupMember = new GlideRecord('sys_user_grmember');
+        groupMember.addQuery('user', user.getUniqueValue());
+        groupMember.addQuery('group', group.getUniqueValue());
+        groupMember.query();
+        if (groupMember.next()) {
+            return groupMember;
+        }
+
+        groupMember = this.glideRecordUtils.insertRecord('sys_user_grmember', {
+            user: user.getUniqueValue(),
+            group: group.getUniqueValue()
+        });
+        this.recordTracker.trackByGlideRecord(groupMember);
+        return groupMember;
+    },
+
+    /**
+     * Adds a role to a group
+     * @param {GlideRecord} group - The group to add the role to
+     * @param {string} roleName - The role to add to the group
+     * @returns {GlideRecord} The newly created sys_group_has_role record
+     */
+    addRoleToGroup: function(group, roleName) {
+        var role = new GlideRecord('sys_user_role');
+        if (!role.get('name', roleName)) {
+            throw new Error('Could not find role with name: ' + roleName);
+        }
+
+        // Check if the group already has the role
+        var groupHasRole = new GlideRecord('sys_group_has_role');
+        groupHasRole.addQuery('role', role.getUniqueValue());
+        groupHasRole.addQuery('group', group.getUniqueValue());
+        groupHasRole.query();
+        if (groupHasRole.next()) {
+            return groupHasRole;
+        }
+
+        groupHasRole = this.glideRecordUtils.insertRecord('sys_group_has_role', {
+            role: role.getUniqueValue(),
+            group: group.getUniqueValue()
+        });
+        this.recordTracker.trackByGlideRecord(groupHasRole);
+        return groupHasRole;
+    },
+
+    /**
+     * Adds a role to a user
+     * @param {GlideRecord} user - The user to add the role to
+     * @param {string} roleName - The role to add to the user
+     * @returns {GlideRecord} The newly created sys_user_has_role record
+     */
+    addRoleToUser: function(user, roleName) {
+        var role = new GlideRecord('sys_user_role');
+        if (!role.get('name', roleName)) {
+            throw new Error('Could not find role with name: ' + roleName);
+        }
+
+        // Check if the user already has the role
+        var userHasRole = new GlideRecord('sys_user_has_role');
+        userHasRole.addQuery('role', role.getUniqueValue());
+        userHasRole.addQuery('user', user.getUniqueValue());
+        userHasRole.query();
+        if (userHasRole.next()) {
+            return userHasRole;
+        }
+
+        userHasRole = this.glideRecordUtils.insertRecord('sys_user_has_role', {
+            role: role.getUniqueValue(),
+            user: user.getUniqueValue()
+        });
+        this.recordTracker.trackByGlideRecord(userHasRole);
+        return userHasRole;
+    },
+
+    /**
+     * Creates a sys_scope record
+     * @param {string} scopeName - The name of the scope to create
+     * @returns {GlideRecord} - The newly created sys_scope record
+     */
+    createScope: function(scopeName) {
+        if (!scopeName) {
+            throw new Error('Scope name cannot be falsy');
+        }
+
+        var scope = new GlideRecord('sys_scope');
+        if (scope.get('scope', scopeName)) {
+            throw new Error('Scope already exists');
+        }
+        scope.newRecord();
+        scope.scope = scopeName;
+        scope.name = scopeName;
+        scope.short_description = 'Scope used in ATF. You can delete this';
+        scope.version = '1.0';
+        scope.update();
+        this.recordTracker.trackByGlideRecord(scope);
+        return scope;
+    },
+
+    /**
+     * Returns the sys_id of the given scopeName
+     * @param {string} scopeName
+     * @returns {string} The sys_id of the scope with the given name
+     */
+    getScopeSysId: function(scopeName) {
+        var scope = new GlideRecord('sys_scope');
+        if (!scope.get('scope', scopeName)) {
+            throw new Error('Scope ' + scopeName + ' does not exist');
+        }
+        return scope.getUniqueValue();
+    }
+};

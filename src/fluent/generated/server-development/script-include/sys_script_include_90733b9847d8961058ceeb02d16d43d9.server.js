@@ -1,0 +1,516 @@
+function KLF_RecordSync_GroupUtilsTest() {
+    var testScopeName = 'x_53417_test_scope';
+
+    function createEmptyGroupMapping() {
+        return {
+            success: false,
+            hasMissingGroups: false,
+            missingGroups: [],
+            mapping: /** @type {{[sysId:string]:string}} */ ({})
+        };
+    }
+
+    /**
+     * @param {global.KLF_TestUtils} testUtils 
+     * @param {string} name
+     * @param {GlideRecord[]} groups sys_user_group records
+     */
+    function createNotification(testUtils, name, groups) {
+        var notification = new GlideRecord('sysevent_email_action');
+        notification.newRecord();
+        notification.name = name;
+        if (Array.isArray(groups)) {
+            notification.recipient_groups = groups.map(function(group) {
+                return group.getUniqueValue();
+            }).join(',');
+        }
+        notification.update();
+        testUtils.recordTracker.trackByGlideRecord(notification);
+        return notification;
+    }
+
+    function createGroupUtils() {
+        var localConnectionConfig = KLF_RecordSyncTest.createLocalConnectionConfig();
+        return new global.KLF_RecordSync_GroupUtils(localConnectionConfig);
+    }
+
+    // List of all the user fields in the scope
+    var groupFieldsInScope = [{
+            sysId: '',
+            columnName: 'assignment_group',
+            table: testScopeName + '_task',
+            type: 'reference'
+        },
+        {
+            sysId: '',
+            columnName: 'readonly_groups',
+            table: testScopeName + '_task',
+            type: 'glide_list'
+        },
+        {
+            sysId: '',
+            columnName: 'requested_for_group',
+            table: testScopeName + '_request',
+            type: 'reference'
+        }
+    ];
+
+    var groupFieldsInTask = groupFieldsInScope.filter(function(field) {
+        return field.table === testScopeName + '_task';
+    });
+
+    // The group fields in request, which will include the group fields in task
+    // because the request table extends the task table
+    var groupFieldsInRequest = groupFieldsInScope.filter(function(field) {
+        return field.table === testScopeName + '_request' ||
+            field.table === testScopeName + '_task';
+    });
+
+    /**
+     * 
+     * @param {KLF_RecordSync_GroupField} f1 
+     * @param {KLF_RecordSync_GroupField} f2 
+     * @returns {number}
+     */
+    function sortFieldsAscByColumnName(f1, f2) {
+        return f1.columnName.localeCompare(f2.columnName);
+    }
+
+    describe(' - ', function() {
+        /** @type {global.KLF_TestUtils} */
+        var testUtils;
+
+        /** @type {global.KLF_RecordSync_GroupUtils} */
+        var groupUtils;
+        beforeEach(function() {
+            groupUtils = createGroupUtils();
+            testUtils = new global.KLF_TestUtils();
+        });
+
+        afterEach(function() {
+            testUtils.cleanup();
+        });
+
+        describe('getGroupFieldsInScope()', function() {
+            it('should find all the group fields in the scope', function() {
+                var actualFields = groupUtils.getGroupFieldsInScope(testScopeName);
+                actualFields.sort(sortFieldsAscByColumnName);
+
+                // Clear the sysId field for comparison. I don't know this in advance
+                actualFields.forEach(function(field) {
+                    field.sysId = '';
+                });
+
+                expect(actualFields).toBeEqual(groupFieldsInScope, 'Group fields in scope are correct');
+            });
+
+        });
+
+        describe('getGroupFieldsInTable()', function() {
+            /**
+             * 
+             * @param {KLF_RecordSync_UserField} f1 
+             * @param {KLF_RecordSync_UserField} f2 
+             * @returns {number}
+             */
+            function sortFieldsAscByColumnName(f1, f2) {
+                return f1.columnName.localeCompare(f2.columnName);
+            }
+
+            it('should find all the group fields in the specified table', function() {
+                var taskActualFields = groupUtils.getGroupFieldsInTable(testScopeName + '_task');
+                taskActualFields.sort(sortFieldsAscByColumnName);
+                // Clear the sysId field for comparison. I don't know this in advance
+                taskActualFields.forEach(function(field) {
+                    field.sysId = '';
+                });
+                expect(taskActualFields).toBeEqual(groupFieldsInTask, 'Group fields in task are correct');
+
+                var requestActualFields = groupUtils.getGroupFieldsInTable(testScopeName + '_request');
+                requestActualFields.sort(sortFieldsAscByColumnName);
+                // Clear the sysId field for comparison. I don't know this in advance
+                requestActualFields.forEach(function(field) {
+                    field.sysId = '';
+                });
+                expect(requestActualFields).toBeEqual(groupFieldsInRequest, 'Group fields in request are correct');
+            });
+
+            it('should throw error if table name does not exist', function() {
+                expect(function() {
+                    groupUtils.getGroupFieldsInTable('non_existent_table');
+                }).toThrow();
+            });
+
+            it('should throw error if table name is falsy', function() {
+                expect(function() {
+                    groupUtils.getGroupFieldsInTable('');
+                }).toThrow();
+            });
+        });
+
+        describe('createMappingFromRemote()', function() {
+            var tableName = testScopeName + '_task';
+
+            it('should create a group mapping', function() {
+                var group1 = testUtils.createGroup(testUtils.getRandomGroupName());
+                var group2 = testUtils.createGroup(testUtils.getRandomGroupName());
+                var group3 = testUtils.createGroup(testUtils.getRandomGroupName());
+
+                var remoteGroups = [{
+                    sysId: 'group1',
+                    name: group1.getValue('name'),
+                    source: group1.getValue('source')
+                }, {
+                    sysId: 'group2',
+                    name: group2.getValue('name'),
+                    source: group2.getValue('source')
+                }, {
+                    sysId: 'group3',
+                    name: group3.getValue('name'),
+                    source: group3.getValue('source')
+                }];
+
+                var groupMapping = global.KLF_RecordSync_GroupUtils.createMappingFromRemote(remoteGroups);
+
+                expect(groupMapping.mapping).toBeEqual({
+                    group1: group1.getUniqueValue(),
+                    group2: group2.getUniqueValue(),
+                    group3: group3.getUniqueValue()
+                }, 'Group mapping is correct');
+
+                expect(groupMapping.hasMissingGroups).toBe(false);
+                expect(groupMapping.error).toBeFalsy();
+                expect(groupMapping.success).toBe(true);
+            });
+
+            it('should find missing groups', function() {
+                // Group 3 does not exist in the local instance so should be missing
+                var group1 = testUtils.createGroup('group1');
+                var group2 = testUtils.createGroup('group2');
+
+                var remoteGroups = [{
+                    sysId: 'group1',
+                    name: group1.getValue('name'),
+                    source: group1.getValue('source')
+                }, {
+                    sysId: 'group2',
+                    name: group2.getValue('name'),
+                    source: group2.getValue('source')
+                }, {
+                    sysId: 'group3',
+                    name: 'group3',
+                    source: ''
+                }];
+
+                var groupMapping = global.KLF_RecordSync_GroupUtils.createMappingFromRemote(remoteGroups);
+
+                expect(groupMapping.mapping).toBeEqual({
+                    group1: group1.getUniqueValue(),
+                    group2: group2.getUniqueValue()
+                }, 'Group mapping is correct');
+
+                expect(groupMapping.hasMissingGroups).toBe(true, 'Missing groups is true');
+                expect(groupMapping.error).toBeFalsy('No error');
+                expect(groupMapping.success).toBe(true, 'Success is true');
+                expect(groupMapping.missingGroups).toBeEqual(['group3'], 'Missing groups are correct');
+            });
+
+        });
+
+        describe('syncGroups()', function() {
+            /** @type {global.KLF_RecordSync_GroupUtils} */
+            var groupUtils;
+            beforeEach(function() {
+                var remoteConnectionConfig = KLF_RecordSyncTest.createRemoteConnectionConfig();
+                groupUtils = new global.KLF_RecordSync_GroupUtils(remoteConnectionConfig);
+            });
+
+            afterEach(function() {
+                KLF_RecordSyncTest.clearRemoteTestData();
+            });
+
+            it('should copy the groups from the local instance to the remote instance', function() {
+                var groupPrefix = 'KLF_RecordSyncTest';
+                var group1 = testUtils.createGroup(groupPrefix + ' - ' + 'group1');
+                var group2 = testUtils.createGroup(groupPrefix + ' - ' + 'group2');
+
+                var response = groupUtils.syncGroups([group1.getUniqueValue(), group2.getUniqueValue()]);
+                if (response) {
+                    expect(response.success).toBe(true, 'Success is true');
+                    if (response.missingManifest) {
+                        expect(response.missingManifest.isEmpty()).toBeTrue('Missing manifest is empty. Meaning all groups were found');
+                    } else {
+                        fail('Missing manifest should not be null');
+                    }
+                } else {
+                    fail('Response should not be null');
+                }
+            });
+
+            it('should throw an exception if a group is not found locally', function() {
+                expect(function() {
+                    groupUtils.syncGroups(['non_existent_group']);
+                }).toThrow();
+            });
+
+            it('should return null if there are no groups to sync', function() {
+                expect(groupUtils.syncGroups([])).toBeNull('Response should be null');
+            });
+
+            it('should not throw exception if the quiet flag is set', function() {
+                expect(function() {
+                    groupUtils.syncGroups(['non_existent_group'], true);
+                }).not.toThrow();
+            });
+
+        });
+
+        xdescribe('createGroupMapping()', function() {
+            var tableName = testScopeName + '_task';
+
+            it('should return error if status code is not 200', function() {
+
+            });
+
+            it('should include missing groups in the request body', function() {
+
+            });
+
+            it('should set the request body correctly', function() {
+                var group1 = testUtils.createGroup('group1');
+                var group2 = testUtils.createGroup('group2');
+                var group3 = testUtils.createGroup('group3');
+
+                spyOn(groupUtils, 'createRestMessage').and.returnValue({
+                    // @ts-ignore
+                    execute: function() {
+                        return {
+                            getStatusCode: function() {
+                                return 200;
+                            },
+                            getBody: function() {
+                                return JSON.stringify({
+                                    result: {
+                                        success: true,
+                                        hasMissingGroups: false,
+                                        missingGroups: [],
+                                        mapping: {
+
+                                        }
+                                    }
+                                });
+                            }
+                        };
+                    }
+                });
+                // groupUtils.createGroupMapping(groupSysIds, 'KLF_RecordSync_GroupUtilsTest', false);
+
+            });
+        });
+
+        describe('updateNotifications()', function() {
+
+            it('should update the notifications using the group mapping', function() {
+                var group1 = testUtils.createGroup(testUtils.getRandomGroupName());
+                var group2 = testUtils.createGroup(testUtils.getRandomGroupName());
+
+                // Create a few notifications
+                var notification1 = createNotification(testUtils, 'notification1', [group1]);
+                var notification2 = createNotification(testUtils, 'notification2', [group1, group2]);
+
+                var notificationSysIds = [notification1.getUniqueValue(), notification2.getUniqueValue()];
+
+                // I'm using a group name here to make it easier to test. Do not use the real group name
+                // or it will be converted into a sys_id
+                var groupMapping = createEmptyGroupMapping();
+                groupMapping.mapping[group1.getUniqueValue()] = '_group1';
+                groupMapping.mapping[group2.getUniqueValue()] = '_group2';
+
+
+                var response = global.KLF_RecordSync_GroupUtils.updateNotifications(groupMapping, notificationSysIds);
+
+                var updatedNotification1 = new GlideRecord('sysevent_email_action');
+                updatedNotification1.get(notification1.getUniqueValue());
+                expect(updatedNotification1.getValue('recipient_groups')).toContain('_group1', 'Notification 1 has group 1');
+
+                var updatedNotification2 = new GlideRecord('sysevent_email_action');
+                updatedNotification2.get(notification2.getUniqueValue());
+                expect(updatedNotification2.getValue('recipient_groups')).toContain('_group1', 'Notification 2 has group 1');
+                expect(updatedNotification2.getValue('recipient_groups')).toContain('_group2', 'Notification 2 has group 2');
+
+                expect(response.success).toBe(true, 'Success is true');
+                expect(response.notUpdatedNotifications).toBeEqual([]);
+                expect(response.error).toBeFalsy('No error');
+                expect(response.updatedNotifications.sort()).toBeEqual(notificationSysIds.sort(), 'Updated notifications are correct');
+                // Do not check for incomplete notifications. This test will probably have
+                // incomplete notifications because the group names are not real
+                // expect(response.incompleteNotifications).toEqual({});
+            });
+
+            it('should not update notification if not in group mapping', function() {
+                var group1 = testUtils.createGroup(testUtils.getRandomGroupName());
+                var group2 = testUtils.createGroup(testUtils.getRandomGroupName());
+
+                var notification = createNotification(testUtils, 'notification', [group1]);
+
+                var notificationSysIds = [notification.getUniqueValue()];
+
+                // Group 1 is not in the group mapping so it should not be updated
+                var groupMapping = createEmptyGroupMapping();
+                groupMapping.mapping[group2.getUniqueValue()] = 'group2';
+
+                var response = global.KLF_RecordSync_GroupUtils.updateNotifications(groupMapping, notificationSysIds);
+
+                var updatedNotification = new GlideRecord('sysevent_email_action');
+                updatedNotification.get(notification.getUniqueValue());
+                expect(updatedNotification.getValue('recipient_groups')).toContain(group1.getUniqueValue(), 'Notification has group 1');
+
+                expect(response.success).toBe(true, 'Success is true');
+                expect(response.incompleteNotifications).toBeFalsy('No incomplete notifications');
+                expect(response.notUpdatedNotifications).toBeEqual([], 'Not updated notifications are empty');
+                expect(response.error).toBeFalsy('No error');
+                expect(response.updatedNotifications).toBeEqual(notificationSysIds, 'Updated notifications are correct');
+            });
+
+            it('should throw error if notifications are not provided', function() {
+                var groupMapping = createEmptyGroupMapping();
+                expect(function() {
+                    // @ts-ignore
+                    global.KLF_RecordSync_GroupUtils.updateNotifications(groupMapping, null);
+                }).toThrow();
+                expect(function() {
+                    // @ts-ignore
+                    global.KLF_RecordSync_GroupUtils.updateNotifications(groupMapping);
+                }).toThrow();
+            });
+
+            it('should return an empty response if no notifications are provided', function() {
+                var groupMapping = createEmptyGroupMapping();
+                var response = global.KLF_RecordSync_GroupUtils.updateNotifications(groupMapping, []);
+                expect(response).toBeEqual({
+                    success: true,
+                    updatedNotifications: [],
+                    notUpdatedNotifications: []
+                }, 'Response is correct');
+            });
+
+            it('should find missing notifications if the notification does not exist', function() {
+                var groupMapping = createEmptyGroupMapping();
+                var fakeNotificationSysIds = [gs.generateGUID(), gs.generateGUID()];
+
+                var response = global.KLF_RecordSync_GroupUtils.updateNotifications(groupMapping, fakeNotificationSysIds);
+
+                expect(response.notUpdatedNotifications.sort()).toBeEqual(fakeNotificationSysIds.sort(), 'Not updated notifications are correct');
+            });
+
+
+        });
+
+        describe('getGroupsUsedInNotifications()', function() {
+            it('should return the groups used in the specified notifications', function() {
+                var group1 = testUtils.createGroup(testUtils.getRandomGroupName());
+                var group2 = testUtils.createGroup(testUtils.getRandomGroupName());
+
+                // Create a few notifications
+                var notification1 = new GlideRecord('sysevent_email_action');
+                notification1.newRecord();
+                notification1.name = 'notification1';
+                notification1.recipient_groups = group1.getUniqueValue();
+                notification1.update();
+                testUtils.recordTracker.trackByGlideRecord(notification1);
+
+                var notification2 = new GlideRecord('sysevent_email_action');
+                notification2.newRecord();
+                notification2.name = 'notification2';
+                notification2.recipient_groups = [group1.getUniqueValue(), group2.getUniqueValue()].join(',');
+                notification2.update();
+                testUtils.recordTracker.trackByGlideRecord(notification2);
+
+                var notification3 = new GlideRecord('sysevent_email_action');
+                notification3.newRecord();
+                notification3.name = 'notification3';
+                notification3.recipient_groups = [group1.getUniqueValue(), group2.getUniqueValue()].join(',');
+                notification3.update();
+                testUtils.recordTracker.trackByGlideRecord(notification3);
+
+                var notificationSysIds = [notification1.getUniqueValue(), notification2.getUniqueValue(), notification3.getUniqueValue()];
+
+                var expectedGroups = [group1.getUniqueValue(), group2.getUniqueValue()].sort();
+                var actualGroups = groupUtils.getGroupsUsedInNotifications(notificationSysIds).sort();
+
+                expect(expectedGroups).toBeEqual(actualGroups, 'Groups are correct');
+            });
+
+            it('should return an empty array if no groups are used in the notifications', function() {
+                var notification1 = new GlideRecord('sysevent_email_action');
+                notification1.newRecord();
+                notification1.name = 'notification1';
+                notification1.update();
+                testUtils.recordTracker.trackByGlideRecord(notification1);
+
+                var notification2 = new GlideRecord('sysevent_email_action');
+                notification2.newRecord();
+                notification2.name = 'notification2';
+                notification2.update();
+                testUtils.recordTracker.trackByGlideRecord(notification2);
+
+                var notificationSysIds = [notification1.getUniqueValue(), notification2.getUniqueValue()];
+                var actualGroups = groupUtils.getGroupsUsedInNotifications(notificationSysIds);
+                expect(actualGroups).toBeEqual([], 'Groups are empty');
+            });
+
+            it('should return an empty array if an empty list of notifications is provided', function() {
+                expect(groupUtils.getGroupsUsedInNotifications([])).toBeEqual([], 'Groups are empty');
+            });
+
+            it('should throw error if notificationSysIds is falsy', function() {
+                expect(function() {
+                    // @ts-ignore
+                    groupUtils.getGroupsUsedInNotifications();
+                }).toThrow();
+                expect(function() {
+                    // @ts-ignore
+                    groupUtils.getGroupsUsedInNotifications(null);
+                }).toThrow();
+            });
+        });
+
+        describe('getUniqueGroupsInTable()', function() {
+            var tableName = testScopeName + '_task';
+
+            it('should return the unique groups in the specified table', function() {
+                var group1 = testUtils.createGroup(testUtils.getRandomGroupName());
+                var group2 = testUtils.createGroup(testUtils.getRandomGroupName());
+                var group3 = testUtils.createGroup(testUtils.getRandomGroupName());
+
+                function createTask( /** @type {GlideRecord} */ group) {
+                    var task = new GlideRecord(tableName);
+                    task.newRecord();
+                    task.assignment_group = group.getUniqueValue();
+                    task.update();
+                }
+                createTask(group1);
+                createTask(group1);
+                createTask(group2);
+                createTask(group3);
+
+                var uniqueGroups = groupUtils.getUniqueGroupsInTable(tableName);
+                var expectedGroups = [group1.getUniqueValue(), group2.getUniqueValue(), group3.getUniqueValue()].sort();
+                expect(uniqueGroups.sort()).toBeEqual(expectedGroups, 'Groups are correct');
+            });
+
+            it('should throw error if table name does not exist', function() {
+                expect(function() {
+                    groupUtils.getUniqueGroupsInTable('non_existent_table');
+                }).toThrow();
+            });
+
+            it('should throw error if table name is falsy', function() {
+                expect(function() {
+                    groupUtils.getUniqueGroupsInTable('');
+                }).toThrow();
+            });
+        });
+
+    });
+}

@@ -1,0 +1,153 @@
+/**
+ * This utility object provides a convenient way to execute GlideRecord operations from a scoped application
+ * on globally scoped tables. This is useful when you need to perform operations on tables that are restricted
+ * to global scope.
+ * 
+ * It also provides a function to transform a GlideRecord into a map. This is useful when you need to pass
+ * GlideRecord data to a client script. The map can be easily converted to JSON and passed to the client script.
+ */
+
+//@ts-ignore
+var global = global || {};
+global.KLF_GlideRecordUtils = function() {};
+
+global.KLF_GlideRecordUtils.prototype = {
+    /**
+     * Transforms the GlideRecord into a map. The exact set of fields to be included can be passed.
+     * If fields is not provided then all non 'sys' fields will be included. Sys fields are excluded
+     * from output. The keys in the map are the field names. Thevalues are the values retrieved with
+     * {@link GlideRecord#getValues}. Display values are copied over to the key value with a suffix of
+     * _display_value. A write flag is copied to the key value witha suffie of _canwrite
+     * @param {GlideRecord} glideRecord 
+     * @param {string[]} [fields]
+     * @returns {Object.<string,string>}
+     */
+    glideRecordToMap: function(glideRecord, fields) {
+        /** @type {Object.<string, string>} */
+        var glideRecordMap = {};
+        var elements = new global.ArrayUtil().convertArray(glideRecord.getElements());
+        elements.filter(function(element) {
+            var name = element.getName();
+
+            // if the fields are specified only include fields in map
+            if (fields) {
+                return fields.indexOf(name) >= 0;
+            }
+
+            if (name == 'sys_id') {
+                return true;
+            } else if (name.startsWith('sys_')) {
+                return false;
+            } else {
+                return true;
+            }
+        }).forEach(function(element) {
+            var name = element.getName();
+            var displayName = name + '_display_value';
+            var writeName = name + '_canwrite';
+            var value = glideRecord.getValue(name);
+            var displayValue = glideRecord.getDisplayValue(name);
+            glideRecord[name] = value;
+            glideRecord[displayName] = displayValue;
+            glideRecord[writeName] = glideRecord[name].canWrite();
+        });
+
+        return glideRecordMap;
+    },
+
+    /**
+     * Used to delete records from tables only accessible in Global scope. Some tables
+     * restrict delete access to only Global so a scoped application can use this method
+     * to delete records in global scope they otherwise wouldn't be able to delete. You
+     * can pass the encodedQuery by generating an encodedQuery using a GlideRecord in the
+     * current scope and pass it to this function
+     * @param {string} tableName The table name to perform deletion
+     * @param {string} encodedQuery An encoded query passed to this function to filter
+     * the records to delete
+     * query params before deletion. This is required
+     * @example var taskDelete = new GlideRecord('task');
+     * taskDelete.addQuery(active, false);
+     * new global.KLF_GlideRecord().deleteRecord('incident', taskDelete.getEncodedQuery());
+     */
+    deleteRecord: function(tableName, encodedQuery) {
+        if (!encodedQuery) {
+            throw 'encodedQuery is required';
+        }
+
+        var glideRecord = new GlideRecord(tableName);
+        glideRecord.addEncodedQuery(encodedQuery);
+        glideRecord.query();
+
+        while (glideRecord.next()) {
+            glideRecord.deleteRecord();
+        }
+    },
+
+    /**
+     * Used to insert records from tables only accessible in Global scope. Some tables
+     * restrict write access to only Global so a scoped application can use this method
+     * to insert records in global scope they otherwise wouldn't be able to update. 	
+     * @param {string} tableName The table name to perform deletion
+     * @param {*} updates An object containing the fields and values to update
+     * @example var taskInsert = new GlideRecord('task');
+     * new global.KLF_GlideRecord().insertRecord('incident', {
+     *   short_description: 'Updated description'
+     * });
+     */
+    insertRecord: function(tableName, updates) {
+        if (!updates) {
+            throw 'updates is required';
+        }
+
+        var glideRecord = new GlideRecord(tableName);
+        glideRecord.newRecord();
+
+        Object.keys(updates).forEach(function(field) {
+            glideRecord.setValue(field, updates[field]);
+        });
+        glideRecord.update();
+        return glideRecord;
+    },
+
+    /**
+     * Used to update records from tables only accessible in Global scope. Some tables
+     * restrict write access to only Global so a scoped application can use this method
+     * to update records in global scope they otherwise wouldn't be able to update. You
+     * can pass the encodedQuery by generating an encodedQuery using a GlideRecord in the
+     * current scope and pass it to this function
+     * @param {string} tableName The table name to perform deletion
+     * @param {string} encodedQuery An encoded query passed to this function to filter
+     * @param {*} updates An object containing the fields and values to update
+     * @returns {string[]} An array of sys_ids of the records updated
+     * @example var taskUpdate = new GlideRecord('task');
+     * taskUpdate.addQuery(active, false);
+     * new global.KLF_GlideRecord().updateRecord('incident', taskUpdate.getEncodedQuery(), {
+     *   short_description: 'Updated description'
+     * });
+     */
+    updateRecord: function(tableName, encodedQuery, updates) {
+        if (!encodedQuery) {
+            throw 'encodedQuery is required';
+        }
+        if (!updates) {
+            throw 'updates is required';
+        }
+
+        var glideRecord = new GlideRecord(tableName);
+        glideRecord.addEncodedQuery(encodedQuery);
+        glideRecord.query();
+
+        /** @type {string[]} */
+        var updatedSysIds = [];
+        while (glideRecord.next()) {
+            Object.keys(updates).forEach(function(field) {
+                glideRecord.setValue(field, updates[field]);
+            });
+            glideRecord.update();
+            updatedSysIds.push(glideRecord.getUniqueValue());
+        }
+
+        return updatedSysIds;
+    }
+
+};

@@ -1,0 +1,1066 @@
+/**
+ * Possible enhancements:
+ * - Add the ability to resume an export. Would need the ability to track where you are in an export
+ * - Maybe sort the tables in order and keep track of when a table is completed
+ * - Might even need to track where you are in the table. Maybe by sorting by created date
+ */
+//@ts-ignore
+var global = global || {};
+
+/**
+ * Object that provides methods to sync records between two ServiceNow instances
+ * 
+ * ServiceNow natively supports transferring application code between instances but does not expose an API to efficiently transfer data between instances.
+ * This script include provides a way to transfer data between instances using the REST API. The basic idea is to script the data transfer in a way that
+ * that is repeatable so the script can be written up front and then run whenever data needs to be transferred. This way the data transfer is automated
+ * and there is no need to manually export and import data.
+ * 
+ * NOTE: To use any of the sync methods you must install this application on the target
+ * instance and the source instance. This scoped application contains the REST API that is used to import records into
+ * the target instance. The open API spec for the REST API is located at 
+ * {@link https://github.com/kfrencher/servicenow-klf-global/blob/main/klf_import_xml_openapi.yaml KLF Import XML Spec}
+ * 
+ * The primary method is {@link global.KLF_RecordSync.syncAllDataInScope} which syncs all the data in
+ * a scoped application from one ServiceNow instance to the same application in a different ServiceNow instance
+ * 
+ * Other methods allow you to sync a single table or a single record
+ * {@link global.KLF_RecordSync.syncTable} and {@link global.KLF_RecordSync.syncRecord} respectively
+ * 
+ * TODO: 
+ * - Possibly add ability to do incremental syncs where the mod count or sys_updated_on is used to determine if a record needs to be synced
+ * - Also may need a way to properly handle sys_user and sys_user_group references that aren't the same in the target instance or don't exist
+ * - Probably need better error handling. It's non-existent right now
+ * 
+ * @class KLF_RecordSync
+ * @param {KLF_RecordSyncConnectionConfig} connectionConfig
+ * @param {KLF_RecordSync_GroupMapping?} [groupMapping]
+ * @param {KLF_RecordSync_UserMapping?} [userMapping]
+ * @param {(xml:string, manifest?:global.KLF_RecordSync.Manifest) => {xml:string, manifest?:global.KLF_RecordSync.Manifest}} [beforeTransfer] A function that is called 
+ * before the transfer is made. This is useful if you want to modify the XML before it is sent to the target instance
+ * 
+ * @example
+ * var recordSync = new global.KLF_RecordSync({
+ *     username: 'admin',
+ *     password: gs.getProperty('KLF_RecordSync.user.password'), // Retrieve password from encoded password property
+ *     instanceUrl: 'https://dev188047.service-now.com',
+ *     chunkSize: 220
+ * });
+ * 
+ * // Example of syncing all the data in a scope
+ * recordSync.syncAllDataInScope('x_53417_demo');
+ * 
+ * // Example of including approvals that are associated with the scope
+ * // This shows that you can also sync data that is outside of the scope as sysapproval_approver records
+ * // are in the global scope
+ * var demoApproval = new GlideRecord('sysapproval_approver');
+ * demoApproval.addQuery('source_table', 'STARTSWITH', 'x_53417_demo');
+ * recordSync.syncTable('sysapproval_approver', demoApproval.getEncodedQuery());
+ */
+global.KLF_RecordSync = function(connectionConfig, groupMapping, userMapping, beforeTransfer) {
+    this.connectionConfig = connectionConfig;
+    this.groupMapping = groupMapping;
+    this.userMapping = userMapping;
+    this.beforeTransfer = beforeTransfer;
+};
+
+/**
+ * Creates a user mapping for the target instance
+ * @param {KLF_RecordSyncConnectionConfig} connectionConfig
+ * @param {string} scope
+ * @returns {KLF_RecordSync_UserMapping}
+ */
+global.KLF_RecordSync.createUserMapping = function(connectionConfig, scope) {
+    var userUtils = new global.KLF_RecordSync_UserUtils(connectionConfig);
+    // I'm overriding the getCacheKey function because I want the cache key to be based on the scope.
+    // The cacheKey is usually namespaced to the instance, and i don't want this behavior
+    userUtils.getCacheKey = function(scope) {
+        return ':'+scope;
+    };
+    var users = userUtils.getUniqueUsersInScope(scope);
+    return userUtils.createUserMapping(users, scope);
+};
+
+/**
+ * Creates a group mapping for the target instance
+ * @param {KLF_RecordSyncConnectionConfig} connectionConfig
+ * @param {string} scope
+ * @returns {KLF_RecordSync_GroupMapping}
+ */
+global.KLF_RecordSync.createGroupMapping = function(connectionConfig, scope) {
+    var groupUtils = new global.KLF_RecordSync_GroupUtils(connectionConfig);
+    // I'm overriding the getCacheKey function because I want the cache key to be based on the scope.
+    // The cacheKey is usually namespaced to the instance, and i don't want this behavior
+    groupUtils.getCacheKey = function(scope) {
+        return ':'+scope;
+    };
+    var groups = groupUtils.getUniqueGroupsInScope(scope);
+    return groupUtils.createGroupMapping(groups, scope);
+};
+
+/**
+ * The manifest is an object that represents the data that is being transfered in a transaction. The keys
+ * in the manifest are the table name and the values are an object where the keys are the sys_ids of the records
+ * being transferred. It's a bit unconventional, but the reason the sys_ids are stored as keys in an object is because
+ * i want them to be unique.
+ * {
+ *    "incident": {"sys_id1": true, "sys_id2": true},
+ * }
+ * @typedef {{[tableName:string]: {[sysId:string]: boolean}}} KLF_Manifest
+ */
+global.KLF_RecordSync.Manifest = function() {
+    /** @type {KLF_Manifest} */
+    this.manifest = {};
+};
+
+/**
+ * @typedef {{success:boolean, payload:string, missingManifest:global.KLF_RecordSync.Manifest?}} KLF_SendToRemoteInstanceResponse
+ */
+
+/**
+ * Configuration object for the KLF_RecordSync class
+ * @typedef KLF_RecordSyncConnectionConfig
+ * @property {string} instanceUrl
+ * @property {string} username
+ * @property {string} password
+ * @property {number} [chunkSize=220] Optional. The number of records to sync at a time. Default is 220. 220 was chosen
+ * intentionally because there is a limitation on some ServiceNow instances that will throw a 400 error if the URL is too long
+ */
+
+global.KLF_RecordSync.Manifest.prototype = {
+    /**
+     * @param {string} message 
+     */
+    logError: function(message) {
+        gs.logError(message, 'KLF_RecordSync.Manifest');
+    },
+
+    /**
+     * Adds a record to the manifest
+     * @param {string} tableName 
+     * @param {string} sysId 
+     */
+    addRecord: function(tableName, sysId) {
+        if (!tableName || !sysId) {
+            this.logError('Invalid table name or sys_id - table:' + tableName + ',' + ' sys_id:' + sysId);
+            return;
+        }
+
+        if (!this.manifest[tableName]) {
+            this.manifest[tableName] = {};
+        }
+        this.manifest[tableName][sysId] = true;
+    },
+
+    /**
+     * Adds multiple records to the manifest
+     * @param {string} tableName
+     * @param {string[]} sysIds
+     */
+    addRecords: function(tableName, sysIds) {
+        var me = this;
+        sysIds.forEach(function(sysId) {
+            me.addRecord(tableName, sysId);
+        });
+    },
+
+    /**
+     * Adds a record to the manifest by GlideRecord
+     * @param {GlideRecord} glideRecord 
+     */
+    addRecordByGlideRecord: function(glideRecord) {
+        if (!glideRecord.isValid()) {
+            // I'm going to try to get the sys_id from the record. This
+            // might fail 
+            try {
+                throw 'Invalid GlideRecord with table name: ' + glideRecord.getTableName() + ' and sys_id: ' + glideRecord.getUniqueValue();
+            } catch (e) {
+                throw 'Invalid GlideRecord with table name: ' + glideRecord.getTableName();
+            }
+        }
+        this.addRecord(glideRecord.getTableName(), glideRecord.getUniqueValue());
+    },
+
+    /**
+     * Adds a manifest to the current manifest
+     * @param {global.KLF_RecordSync.Manifest} manifest
+     */
+    addManifest: function(manifest) {
+        var me = this;
+        manifest.getTables().forEach(function(tableName) {
+            manifest.getSysIdsForTable(tableName).forEach(function(sysId) {
+                me.addRecord(tableName, sysId);
+            });
+        });
+    },
+
+    /**
+     * Returns all the tables in the manifest
+     * @returns {string[]}
+     */
+    getTables: function() {
+        return Object.keys(this.manifest).sort();
+    },
+
+    /**
+     * Returns all the sys_ids for a table in the manifest
+     * @param {string} tableName
+     * @returns {string[]}
+     */
+    getSysIdsForTable: function(tableName) {
+        var entries = this.manifest[tableName];
+        if (entries) {
+            return Object.keys(entries).sort();
+        } else {
+            return [];
+        }
+    },
+
+    /**
+     * Returns a Object representation of the manifest. This is to facilitate JSON serialization
+     * @returns {{[tableName:string]:string[]}}
+     */
+    toObj: function() {
+        var me = this;
+        return this.getTables().reduce(function(manifest, tableName) {
+            manifest[tableName] = me.getSysIdsForTable(tableName);
+            return manifest;
+        }, /** @type {{[tableName:string]:string[]}} */ ({}));
+    },
+
+    /**
+     * Returns a JSON representation of the manifest
+     */
+    toJson: function() {
+        return JSON.stringify(this.toObj(), null, 4);
+    },
+
+    /**
+     * Returns true if the manifest is empty
+     * @returns {boolean}
+     */
+    isEmpty: function() {
+        return this.getTables().length === 0;
+    },
+
+    /**
+     * Validates the manifest against the local instance. It checks to see if the records exist in the local instance.
+     * It then builds a new manifest of records that do not exist in the local instance
+     * @returns {global.KLF_RecordSync.Manifest} A manifest of records that do not exist in the local instance
+     */
+    validate: function() {
+        var me = this;
+        var missingManifest = new global.KLF_RecordSync.Manifest();
+        this.getTables().forEach(function(tableName) {
+            var manifestSysIds = me.getSysIdsForTable(tableName);
+            var gr = new GlideAggregate(tableName);
+            gr.addQuery('sys_id', 'IN', manifestSysIds.join(','));
+            gr.groupBy('sys_id');
+            gr.query();
+            var foundSysIds = [];
+            while (gr.next()) {
+                foundSysIds.push(gr.getValue('sys_id'));
+            }
+            var missingSysIds = new global.ArrayUtil().diff(manifestSysIds, foundSysIds);
+            missingManifest.addRecords(tableName, missingSysIds);
+        });
+        return missingManifest;
+    }
+};
+
+/**
+ * Creates a manifest from the object generated by {@link global.KLF_RecordSync.Manifest.toObj}
+ * @param {{[tableName:string]:string[]}} manifestObject
+ * @returns {global.KLF_RecordSync.Manifest}
+ */
+global.KLF_RecordSync.Manifest.createManifestFromObj = function(manifestObject) {
+    var manifest = new global.KLF_RecordSync.Manifest();
+    for (var tableName in manifestObject) {
+        manifest.addRecords(tableName, manifestObject[tableName]);
+    }
+    return manifest;
+};
+
+/**
+ * Creates a manifest from the JSON representation
+ * @param {string} jsonManifest
+ * @returns {global.KLF_RecordSync.Manifest}
+ */
+global.KLF_RecordSync.Manifest.createManifestFromJson = function(jsonManifest) {
+    var manifestObj = JSON.parse(jsonManifest);
+    return global.KLF_RecordSync.Manifest.createManifestFromObj(manifestObj);
+};
+
+
+/**
+ * Imports a record into ServiceNow using GlideUpdateManager2
+ * @param {string} xml
+ */
+global.KLF_RecordSync.loadRecordByGlideUpdateManager2 = function(xml) {
+    // @ts-ignore
+    var updateManager = new global.GlideUpdateManager2();
+    updateManager.loadXML(xml);
+};
+
+global.KLF_RecordSync.prototype = {
+    /**
+     * @param {string} message 
+     */
+    logError: function(message) {
+        gs.logError(message, 'KLF_RecordSync');
+    },
+    /**
+     * @param {string} message 
+     */
+    logInfo: function(message) {
+        gs.log(message, 'KLF_RecordSync');
+    },
+
+    dataTransferUtils: new global.KLF_DataTransferUtils(),
+
+    /**
+     * Syncs all the data in the scope excluding any tables listed in the excluded table
+     * list
+     * @param {string} scopeNamespace
+     * @param {string[]} [excludedTables]
+     * @param {boolean} [forceSync] If true, will sync all records regardless of whether they exist in the target instance
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    syncAllDataInScope: function(scopeNamespace, excludedTables, forceSync) {
+        var tables = this.dataTransferUtils.getBaseTablesInScope(scopeNamespace, excludedTables);
+        var me = this;
+        var missingManifest = new global.KLF_RecordSync.Manifest();
+        tables.forEach(function(table) {
+            missingManifest.addManifest(me.syncTable(table, '', excludedTables, forceSync));
+        });
+        return missingManifest;
+    },
+
+    /**
+     * Syncs document that could contain data from a number of tables from ServiceNow instance to target ServiceNow instance 
+     * @param {Document} document
+     * @param {global.KLF_RecordSync.Manifest} [manifest]
+     * @returns {KLF_SendToRemoteInstanceResponse}
+     */
+    syncDocument: function(document, manifest) {
+        return this.sendToRemoteInstance(this.documentToString(document), manifest);
+    },
+
+    /**
+     * Syncs a single record from one table in a ServiceNow instance to the same table in a different ServiceNow instance 
+     * @param {GlideRecord} glideRecord
+     * @returns {KLF_SendToRemoteInstanceResponse}
+     */
+    syncRecord: function(glideRecord) {
+        var unloadDocument = this.createUnloadDocument();
+        var unloadedData = this.unloadRecordWithRelatedRecords(glideRecord, unloadDocument);
+        return this.sendToRemoteInstance(this.documentToString(unloadedData.document), unloadedData.manifest);
+    },
+
+    /**
+     * This is used to filter out the sys_ids that are already in the target instance
+     * It's primarily used to prevent sending unnecessary data to the target instance
+     * Refer to {@link global.KLF_RecordSync.syncTable} for an example of how this is used
+     * @param {string[]} sourceSysIds 
+     * @param {string} tableName 
+     * @returns {string[]?}
+     */
+    getSysIdsToInsert: function(sourceSysIds, tableName) {
+        // Query the remote instance using the REST table API for the records that are in the sysIds array
+        var request = this.createRestMessage();
+        request.setHttpMethod('GET');
+        var endpointPath = '/api/now/table/' + tableName;
+        var query = [
+            'sysparm_fields=sys_id',
+            'sysparm_query=sys_idIN' + encodeURIComponent(sourceSysIds.join(','))
+        ].join('&');
+        var endpoint = request.getEndpoint() + endpointPath + '?' + query;
+        request.setEndpoint(endpoint);
+        var response = request.execute();
+
+        if (response.getStatusCode() != 200) {
+            this.logError('Failed to get the records from the target instance');
+            this.logError('Received status code: ' + response.getStatusCode());
+            this.logError('Received body: ' + response.getBody());
+            return null;
+        }
+
+        /** @type {{result:[{sys_id:string}]}} */
+        var responseBody;
+        try {
+            responseBody = JSON.parse(response.getBody());
+        } catch (e) {
+            this.logError('Failed to parse the response from the target instance');
+            this.logError('Received status code: ' + response.getStatusCode());
+            this.logError('Received body: ' + response.getBody());
+            return null;
+        }
+
+        // The sys_ids in the response represent records that already exist in the target instance
+        // Subtract the sys_ids in the response from the sysIds array to get the sys_ids that do not exist in the target instance
+        // This will be the sys_ids that need to be inserted into the target instance
+        var targetSysIds = /** @type string[] */ ([]);
+        responseBody.result.forEach(function(record) {
+            targetSysIds.push(record.sys_id);
+        });
+
+        return sourceSysIds.filter(function(sysId) {
+            return targetSysIds.indexOf(sysId) === -1;
+        });
+    },
+
+    /**
+     * Syncs data from one table in a ServiceNow instance to the same table in a different ServiceNow instance 
+     * You can provide an encoded query string to filter the records that are synced
+     * 
+     * One simple way to get the encoded query string is to use the filter navigator in ServiceNow
+     * Another is to build the query using GlideRecord and then call GlideRecord.getEncodedQuery()
+     * 
+     * This will return a manifest of records that were not inserted into the target instance
+     * @param {string} tableName
+     * @param {string} [encodedQueryString]
+     * @param {string[]} [excludedTables] This may be necessary if the table is extended and you want to exclude some of the
+     * tables that extend the base table
+     * @param {boolean} [forceSync] If true, will sync all records regardless of whether they exist in the target instance
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    syncTable: function(tableName, encodedQueryString, excludedTables, forceSync) {
+        var me = this;
+        var missingRecordsManifest = new global.KLF_RecordSync.Manifest();
+
+        /**
+         * @param {number} start 
+         * @param {number} chunkSize 
+         * @returns 
+         */
+        function syncChunk(start, chunkSize) {
+            // I want to transfer the data in chunks. So I will use the GlideRecord.setWindow method to query a batch of records at a time.
+            // Use the tableName to query a batch of records from the source table
+            var source = new GlideRecord(tableName);
+            source.orderBy('sys_created_on');
+
+            // If it has an auto number field then order by that field as well
+            // There can be a subtle issue if we order by sys_created_on and while this script is running
+            // records are being rapidly created in the source instance. Those records may have the same
+            // sys_created_on value and the order of those records will be non-deterministic. So if the table
+            // has an auto number field then order by that field as well
+            if (me.tableHasAutoNumberField(tableName)) {
+                source.orderBy('number');
+            }
+
+            if (encodedQueryString) {
+                source.addEncodedQuery(encodedQueryString);
+            }
+
+            if (excludedTables && source.isValidField('sys_class_name')) {
+                source.addQuery('sys_class_name', 'NOT IN', excludedTables);
+            }
+
+            source.chooseWindow(start, start + chunkSize);
+            source.query();
+
+            var sourceSysIds = [];
+            while (source.next()) {
+                sourceSysIds.push(source.sys_id.toString());
+            }
+
+            me.logInfo('Chunk: ' + start + ' to ' + (start + chunkSize) + ' of ' + totalRecords);
+
+            var sysIdsToInsert = forceSync ? sourceSysIds : me.getSysIdsToInsert(sourceSysIds, tableName);
+
+            if (!Array.isArray(sysIdsToInsert)) {
+                me.logError('Failed to get the sys_ids to insert');
+                return null;
+            }
+
+            me.logInfo(tableName + ' Syncing ' + sysIdsToInsert.length + ' records: ');
+
+            // Requery the source for the records that need to be inserted into the target instance
+			if (sysIdsToInsert.length > 0) {
+				var sourceToInsert = new GlideRecord(tableName);
+				sourceToInsert.addQuery('sys_id', 'IN', sysIdsToInsert.join(','));
+				sourceToInsert.query();
+				var unloadDocument = me.createUnloadDocument();
+				var manifest = new global.KLF_RecordSync.Manifest();
+				while (sourceToInsert.next()) {
+					var unloadedData = me.unloadRecordWithRelatedRecords(sourceToInsert, unloadDocument);
+					manifest.addManifest(unloadedData.manifest);
+				}
+            
+                var remoteResponse = me.sendToRemoteInstance(me.documentToString(unloadDocument), manifest);
+                if (remoteResponse.success) {
+                    if (remoteResponse.missingManifest) {
+                        missingRecordsManifest.addManifest(remoteResponse.missingManifest);
+                    }
+                } else {
+                    me.logError('Failed to sync chunk:\n\n' + manifest.toJson() + '\n\n' + remoteResponse.payload);
+                }
+            } else {
+                me.logInfo('No records to sync for this chunk');
+            }
+
+        }
+
+        var chunkSize = this.connectionConfig.chunkSize || 220;
+        var glideRecord = new GlideRecord(tableName);
+        if (glideRecord.isValid()) {
+            this.logInfo('Starting sync of table: ' + tableName);
+            // First get the size of the table
+            // Then sync records in chunks
+            if (encodedQueryString) {
+                this.logInfo(encodedQueryString);
+                glideRecord.addEncodedQuery(encodedQueryString);
+            }
+            if (excludedTables && glideRecord.isValidField('sys_class_name')) {
+                this.logInfo('Excluding tables: ' + excludedTables);
+                glideRecord.addQuery('sys_class_name', 'NOT IN', excludedTables);
+            }
+            glideRecord.query();
+            var totalRecords = glideRecord.getRowCount();
+            this.logInfo('Total records: ' + totalRecords);
+            var i = 0;
+            while (i < totalRecords) {
+                syncChunk(i, chunkSize);
+                i = i + chunkSize;
+            }
+            return missingRecordsManifest;
+        } else {
+            throw new Error('Invalid table name: ' + tableName);
+        }
+    },
+
+    /**
+     * Returns a sn_ws.RESTMessageV2 object that is configured to make a request to the target instance
+     * @returns {sn_ws.RESTMessageV2}
+     */
+    createRestMessage: function() {
+        var request = new sn_ws.RESTMessageV2();
+        request.setRequestHeader("Accept", "application/json");
+        var authHeader = 'Basic ' + GlideStringUtil.base64Encode(this.connectionConfig.username + ':' + this.connectionConfig.password);
+        request.setRequestHeader('Authorization', authHeader);
+        // Do not use setBasicAuth. This does not work with mutual auth for some reason
+        // request.setBasicAuth(this.connectionConfig.username, this.connectionConfig.password);
+        request.setEndpoint(this.connectionConfig.instanceUrl);
+        return request;
+    },
+
+    /**
+     * Creates a document object that can be passed to {@link global.KLF_RecordSync.unloadRecord}
+     * This is useful when you want to add multiple unloaded records to the same document
+     * @returns {Document}
+     */
+    createUnloadDocument: function() {
+        // @ts-ignore
+        var document = global.GlideXMLUtil.newDocument('unload');
+        var date = new GlideDateTime();
+        document.documentElement.setAttribute('unload_date', date.toString());
+        return document;
+    },
+
+    /**
+     * Adds the record's related journal entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addJournalEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var journal = new GlideRecord("sys_journal_field");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        journal.addQuery("name", parent.getRecordClassName());
+        journal.addQuery("element_id", parent.getUniqueValue());
+        journal.query();
+        while (journal.next()) {
+            manifest.addRecordByGlideRecord(journal);
+            this.unloadRecord(journal, document);
+        }
+        return manifest;
+    },
+
+    /**
+     * Adds the record's related audit entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addAuditEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var audit = new GlideRecord("sys_audit");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        audit.addQuery("tablename", parent.getRecordClassName());
+        audit.addQuery("documentkey", parent.getUniqueValue());
+        audit.query();
+        while (audit.next()) {
+            manifest.addRecordByGlideRecord(audit);
+            this.unloadRecord(audit, document);
+        }
+        return manifest;
+    },
+
+    /**
+     * Adds the record's related currency entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addCurrencyEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var currency = new GlideRecord("fx_currency_instance");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        currency.addQuery("table", parent.getRecordClassName());
+        currency.addQuery("id", parent.getUniqueValue());
+        currency.query();
+        while (currency.next()) {
+            manifest.addRecordByGlideRecord(currency);
+            this.unloadRecord(currency, document);
+        }
+        return manifest;
+    },
+
+    /**
+     * Adds the record's related currency entries to the update set
+     * @param {GlideRecord} parent
+     * @param {Document} document
+     * @returns {global.KLF_RecordSync.Manifest}
+     */
+    addPriceEntries: function(parent, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+
+        var price = new GlideRecord("fx_price");
+        // Intentionally using GlideRecord.getRecordClassName because it will correctly
+        // handle returning the correct table name when dealing with extended records
+        price.addQuery("table", parent.getRecordClassName());
+        price.addQuery("id", parent.getUniqueValue());
+        price.query();
+        while (price.next()) {
+            manifest.addRecordByGlideRecord(price);
+            this.unloadRecord(price, document);
+        }
+        return manifest;
+    },
+
+    /**
+     * Maps a reference field using the provided mapping
+     * @param {GlideRecord} glideRecord
+     * @param {string} fieldName 
+     * @param {{[key: string]: string}} mapping
+     */
+    mapReferenceField: function(glideRecord, fieldName, mapping) {
+        var value = mapping[glideRecord.getValue(fieldName)] ||
+            glideRecord.getValue(fieldName);
+        glideRecord.setValue(fieldName, value);
+    },
+
+    /**
+     * Maps a list field using the provided mapping
+     * @param {GlideRecord} glideRecord
+     * @param {string} fieldName 
+     * @param {{[key: string]: string}} mapping
+     */
+    mapListField: function(glideRecord, fieldName, mapping) {
+        var value = glideRecord.getValue(fieldName);
+        if (!value) {
+            return;
+        }
+        var groupSysIds = value.split(',');
+        var mappedSysIds = groupSysIds.map(function(sysId) {
+            return mapping[sysId] || sysId;
+        });
+        glideRecord.setValue(fieldName, mappedSysIds.join(','));
+    },
+
+    /**
+     * Uses the user mapping to map the users in the record to the users in the target instance
+     * @param {GlideRecord} glideRecord 
+     */
+    mapUsers: function(glideRecord) {
+        var me = this;
+
+        if (!me.userMapping) {
+            return;
+        }
+
+        var mapping = me.userMapping.mapping;
+
+        // Need to find all the fields that are user references
+        var elements = new global.ArrayUtil().convertArray(glideRecord.getElements());
+        elements.forEach(function(element) {
+            var elementDescriptor = element.getED();
+            if (elementDescriptor) {
+                var internalType = elementDescriptor.getInternalType();
+                var table;
+                if (internalType == 'reference') {
+                    table = elementDescriptor.getReference();
+                    if (table == 'sys_user') {
+                        me.mapReferenceField(glideRecord, element.getName(), mapping);
+                    }
+                } else if (internalType == 'glide_list') {
+                    table = elementDescriptor.getReference();
+                    if (table == 'sys_user') {
+                        me.mapListField(glideRecord, element.getName(), mapping);
+                    }
+                }
+            }
+        });
+    },
+
+    /**
+     * Uses the group mapping to map the groups in the record to the groups in the target instance
+     * @param {GlideRecord} glideRecord 
+     */
+    mapGroups: function(glideRecord) {
+        var me = this;
+
+        if (!me.groupMapping) {
+            return;
+        }
+
+        var mapping = me.groupMapping.mapping;
+
+        // Need to find all the fields that are group references
+        var elements = new global.ArrayUtil().convertArray(glideRecord.getElements());
+        elements.forEach(function(element) {
+            var elementDescriptor = element.getED();
+            if (elementDescriptor) {
+                var internalType = elementDescriptor.getInternalType();
+                var table;
+                if (internalType == 'reference') {
+                    table = elementDescriptor.getReference();
+                    if (table == 'sys_user_group') {
+                        me.mapReferenceField(glideRecord, element.getName(), mapping);
+                    }
+                } else if (internalType == 'glide_list') {
+                    table = elementDescriptor.getReference();
+                    if (table == 'sys_user_group') {
+                        me.mapListField(glideRecord, element.getName(), mapping);
+                    }
+                }
+            }
+        });
+    },
+
+    /**
+     * Generates XML from GlideRecord that is like the XML generated by exporting a record from ServiceNow.
+     * This XML can be used to import a record into ServiceNow.
+     * @param {GlideRecord} glideRecord 
+     * @param {Document} [document]
+     * @returns {Document}
+     */
+    unloadRecord: function(glideRecord, document) {
+        // I'm going to write to this glideRecord so I don't want something downstream
+        // to write to the database so I'm disabling write operations just in case
+        // something downstream tries to write
+        glideRecord.setAbortAction(true);
+
+        // @ts-ignore
+        var _document = document || global.GlideXMLUtil.newDocument('unload');
+        if (!document) {
+            // If the document was not passed in, then add the unload_date attribute
+            var date = new GlideDateTime();
+            _document.documentElement.setAttribute('unload_date', date.toString());
+        }
+
+        // If this is an extended table then I need the true record and not the base record
+        // If I detect this isn't the extended record I query for the extended record
+        if (glideRecord.getTableName() != glideRecord.getRecordClassName()) {
+            var extended = new GlideRecord(glideRecord.getRecordClassName());
+            extended.get(glideRecord.getUniqueValue());
+
+            // This will map the groups in the record to the groups in the target instance
+            // if a group mapping is provided in the constructor
+            this.mapGroups(glideRecord);
+
+            // This will map the users in the record to the users in the target instance
+            this.mapUsers(glideRecord);
+            // @ts-ignore
+            new global.GlideUnloader().unloadGlideRecord(_document, extended, 'INSERT_OR_UPDATE');
+        } else {
+            // This will map the groups in the record to the groups in the target instance
+            // if a group mapping is provided in the constructor
+            this.mapGroups(glideRecord);
+
+            // This will map the users in the record to the users in the target instance
+            this.mapUsers(glideRecord);
+
+            // @ts-ignore
+            new global.GlideUnloader().unloadGlideRecord(_document, glideRecord, 'INSERT_OR_UPDATE');
+        }
+
+        return _document;
+
+    },
+
+    /**
+     * Generates XML from GlideRecord that is like the XML generated by exporting a record from ServiceNow.
+     * This XML can be used to import a record into ServiceNow.
+     * 
+     * Adds the record and its related audit entries, journal entries, and attachments to the document
+     * @param {GlideRecord} glideRecord 
+     * @param {Document} [document]
+     * @returns {{manifest:global.KLF_RecordSync.Manifest, document:Document}}
+     */
+    unloadRecordWithRelatedRecords: function(glideRecord, document) {
+        var manifest = new global.KLF_RecordSync.Manifest();
+        manifest.addRecordByGlideRecord(glideRecord);
+
+        // @ts-ignore
+        var _document = document || global.GlideXMLUtil.newDocument('unload');
+        if (!document) {
+            // If the document was not passed in, then add the unload_date attribute
+            var date = new GlideDateTime();
+            _document.documentElement.setAttribute('unload_date', date.toString());
+        }
+
+        // Initially add the record to the document
+        this.unloadRecord(glideRecord, _document);
+
+        // Add related records to the document
+        manifest.addManifest(this.addAuditEntries(glideRecord, _document));
+        manifest.addManifest(this.addJournalEntries(glideRecord, _document));
+        manifest.addManifest(this.addCurrencyEntries(glideRecord, _document));
+        manifest.addManifest(this.addPriceEntries(glideRecord, _document));
+
+        return {
+            manifest: manifest,
+            document: _document
+        };
+    },
+
+    /**
+     * Returns the XML representation of the Document
+     * @param {Document} document 
+     * @param {boolean} [prettyPrint]
+     * @returns {string}
+     */
+    documentToString: function(document, prettyPrint) {
+        if (prettyPrint) {
+            // @ts-ignore
+            return String(global.GlideXMLUtil.toIndentedString(document));
+        } else {
+            // @ts-ignore
+            return String(global.GlideXMLUtil.toString(document));
+        }
+    },
+
+    /**
+     * This isn't used right now. The thought is that it could be used to generate a custom version of the XML. You'd do
+     * that if you needed to do something special with the XML before sending it to the target instance. One use case I can
+     * think of is altering how the sys_user and sys_user_group references are handled because the sys_id values will be different
+     * in the target instance
+     * 
+     * Generates XML from GlideRecord that is like the XML generated by exporting a record from ServiceNow.
+     * This XML can be used to import a record into ServiceNow.
+     * @param {GlideRecord} glideRecord 
+     */
+    unloadRecordCustom: function(glideRecord) {
+        var xml = '<record_update>';
+        xml += '<' + glideRecord.getTableName() + '>';
+        var fields = glideRecord.getFields();
+        for (var i = 0; i < fields.size(); i++) {
+            var field = fields.get(i);
+            xml += '<' + field + '>' + glideRecord[field] + '</' + field + '>';
+        }
+        xml += '</' + glideRecord.getTableName() + '>';
+        xml += '</record_update>';
+        return xml;
+    },
+
+    /**
+     * Imports a record into ServiceNow using the Table API.
+     * Returns whatever the response was or null if there was an error
+     * 
+     * If a manifest is provided then the manifest is validated on the remote
+     * instance to ensure the records in the manifest were inserted
+     * 
+     * @param {string} xml 
+     * @param {global.KLF_RecordSync.Manifest} [manifest]
+     * before the request is sent. It can be used to modify the XML or manifest before sending it to the target instance
+     * @returns {KLF_SendToRemoteInstanceResponse}
+     */
+    sendToRemoteInstance: function(xml, manifest) {
+        var _xml = xml;
+        var _manifest = manifest;
+
+        if (this.beforeTransfer) {
+            var result = this.beforeTransfer(xml, manifest);
+            _xml = result.xml;
+            _manifest = result.manifest;
+        }
+
+        var request = this.createRestMessage();
+        request.setHttpMethod('POST');
+        request.setRequestHeader('Content-Type', 'application/xml');
+        var endpoint = request.getEndpoint() + gs.getProperty('KLF_RecordSync.endpoint.import.path');
+        request.setEndpoint(endpoint);
+        request.setRequestBody(_xml);
+        var response = request.execute();
+        if (response.getStatusCode() != 200) {
+            this.logError('Failed to load the record into the target instance');
+            this.logError('Received status code: ' + response.getStatusCode());
+            this.logError('Received body: ' + response.getBody());
+            return {
+                success: false,
+                payload: response.getBody(),
+                missingManifest: null
+            };
+        }
+
+        var payload = response.getBody();
+
+        if (_manifest) {
+            return {
+                success: true,
+                payload: payload,
+                missingManifest: this.validateSync(_manifest)
+            };
+        } else {
+            return {
+                success: true,
+                payload: payload,
+                missingManifest: null
+            };
+        }
+
+    },
+
+    /**
+     * Checks the target instance for the list of records specified in the manifest. If the records do not exist in the target instance
+     * then a new manifest is created that contains the records that do not exist in the target instance
+     * @param {global.KLF_RecordSync.Manifest} manifest
+     * @returns {global.KLF_RecordSync.Manifest?} A manifest of records that do not exist in the remote instance
+     */
+    validateSync: function(manifest) {
+        var request = this.createRestMessage();
+        request.setHttpMethod('POST');
+        request.setRequestHeader('Content-Type', 'application/json');
+        var endpoint = request.getEndpoint() + gs.getProperty('KLF_RecordSync.endpoint.import.path') + '/validate_manifest';
+        request.setEndpoint(endpoint);
+        request.setRequestBody(manifest.toJson());
+        var response = request.execute();
+        if (response.getStatusCode() != 200) {
+            this.logError('Failed to validate manifest');
+            this.logError('Received status code: ' + response.getStatusCode());
+            this.logError('Received body: ' + response.getBody());
+            return null;
+        }
+
+        var payload = response.getBody();
+        var parsedPayload = JSON.parse(payload);
+        var missingManifest = global.KLF_RecordSync.Manifest.createManifestFromObj(parsedPayload.result);
+        return missingManifest;
+    },
+
+    /**
+     * Returns true if the table has an auto number field called number
+     * @param {string} tableName 
+     * @returns {boolean}
+     */
+    tableHasAutoNumberField: function(tableName) {
+        var gr = new GlideRecord(tableName);
+        if (!gr.isValid()) {
+            return false;
+        }
+
+        if (!gr.isValidField('number')) {
+            return false;
+        }
+
+        var table = new GlideRecord('sys_db_object');
+        if (!table.get('name', tableName)) {
+            return false;
+        }
+
+        // If the table has a number_ref field then it is an auto number field
+        if (table.number_ref.nil()) {
+            return false;
+        }
+
+        // Just make sure the field is active
+        var numberColumn = new GlideRecord('sys_dictionary');
+        numberColumn.addQuery('name', tableName);
+        numberColumn.addQuery('element', 'number');
+        numberColumn.query();
+        return numberColumn.next() && Boolean(numberColumn.active);
+    }
+
+};
+
+(function() {
+    var scope = 'x_53417_demo';
+
+    /**
+     * When initializing the KLF_RecordSync object you must pass in a configuration object
+     * that contains connection information to the target instance.
+     */
+    function getConnectionConfig() {
+        var connectionConfig = {
+            instanceUrl: 'https://dev229555.service-now.com/',
+            username: 'admin',
+            password: gs.getProperty('KLF_RecordSync.password'),
+            chunkSize: 20
+        };
+        return connectionConfig;
+    }
+
+    /**
+     * Checks the target instance for notifications that need to be updated
+     */
+    function checkNotifications() {
+        var connectionConfig = getConnectionConfig();
+        var groupUtils = new global.KLF_RecordSync_GroupUtils(connectionConfig);
+        var notifications = groupUtils.getNotificationsUsingGroupsInScope(scope);
+        if (notifications.length > 0) {
+            gs.info('Check Notifications: ' + notifications.join('\n'));
+        } else {
+            gs.info('No notifications found');
+        }
+    }
+
+    /**
+     * Updates the notifications in the target instance
+     */
+    function updateNotifications() {
+        var connectionConfig = getConnectionConfig();
+        var groupUtils = new global.KLF_RecordSync_GroupUtils(connectionConfig);
+        var notifications = groupUtils.getNotificationsUsingGroupsInScope(scope);
+        groupUtils.updateRemoteNotifications(groupUtils.getGroupMapping(scope), notifications);
+    }
+
+    function transferData() {
+        var connectionConfig = getConnectionConfig();
+        var userMapping = new global.KLF_RecordSync_UserUtils(connectionConfig).getUserMapping(scope);
+        var groupMapping = new global.KLF_RecordSync_GroupUtils(connectionConfig).getGroupMapping(scope);
+        var recordSync = new global.KLF_RecordSync(connectionConfig, groupMapping, userMapping);
+
+        // Example of syncing all the data in a scope
+        // This will find all tables in the x_53417_demo scope and sync all the data in those tables
+        recordSync.syncAllDataInScope('x_53417_demo');
+
+        // Example of including approvals that are associated with the scope
+        // This shows that you can also sync data that is outside of the scope as sysapproval_approver records
+        // are in the global scope
+        var demoApproval = new GlideRecord('sysapproval_approver');
+        demoApproval.addQuery('source_table', 'STARTSWITH', 'x_53417_demo');
+        recordSync.syncTable('sysapproval_approver', demoApproval.getEncodedQuery());
+    }
+
+    // Checks to see if there are any notifications that need to be updated
+    checkNotifications();
+
+    // Creates the user mapping. This is necessary to map the users in the source instance to the users in the target instance
+    global.KLF_RecordSync.createUserMapping(getConnectionConfig(), 'x_53417_demo');
+
+    // Creates the group mapping. This is necessary to map the groups in the source instance to the groups in the target instance
+    global.KLF_RecordSync.createGroupMapping(getConnectionConfig(), 'x_53417_demo');
+
+    // Transfers the data from the source instance to the target instance
+    transferData();
+
+    // Updates the notifications in the target instance. This is necessary for notifications that directly reference groups
+    updateNotifications();
+});

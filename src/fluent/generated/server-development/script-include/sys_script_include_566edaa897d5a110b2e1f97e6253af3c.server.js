@@ -1,0 +1,87 @@
+/**
+ * This script includes functions for working with metrics. Metrics are located in the Metrics module.
+ * They are used to generated data associated with a record so that it can be used in reports.
+ * 
+ * Refer to the ServiceNow documentation for more information on metrics:
+ * https://docs.servicenow.com/csh?topicname=c_MetricDefinitionSupport.html&version=latest
+ * 
+ * Some of the functions in this script are:
+ * - createMetricInstance: Creates a metric instance record for a given metric definition and record
+ * - clearMetricsByRelatedRecord: Deletes all metric instances for a given record
+ * - queueMetricUpdate: Used in a business rule to queue the metric.update event. This is used when creating metrics on a table that doesn't extend Task
+ */
+// @ts-ignore
+var global = global || {};
+
+global.KLF_MetricUtils = function() {};
+
+global.KLF_MetricUtils.prototype = {
+    /**
+     * @param {GlideRecord} glideRecord 
+     * @param {GlideRecord} metricDefinition 
+     * @returns {GlideRecord}
+     */
+    createMetricInstance: function(glideRecord, metricDefinition) {
+        var metricInstance = new GlideRecord('metric_instance');
+        metricInstance.newRecord();
+        metricInstance.table = glideRecord.getRecordClassName();
+        metricInstance.id = glideRecord.sys_id;
+        metricInstance.definition = metricDefinition.sys_id;
+        metricInstance.field = metricDefinition.field;
+        return metricInstance;
+    },
+
+    /**
+     * @param {string} table 
+     * @param {string} sysId 
+     */
+    clearMetricsByRelatedRecord: function(table, sysId) {
+        if (table && sysId) {
+            var metricInstance = new GlideRecord('metric_instance');
+            metricInstance.addQuery('table', table);
+            metricInstance.addQuery('id', sysId);
+            metricInstance.deleteMultiple();
+        }
+    },
+
+    /**
+     * This function should be called from a business rule.
+     * 
+     * Function is copied from "metrics events" business rule on the Task table
+     * This function is used to queue the metric update event. When creating a Metric Definition
+     * that doesn't extend the Task table, the "metrics events" business rule must be copied to the
+     * new table and the queueMetricUpdate function must be called from the "onAfter" business rule
+     * 
+     * This function must be called from global scope. So this function is here in global so it can be
+     * called from the business rule that will be in the application scope.
+     */
+    queueMetricUpdate: function() {
+        var gru = GlideScriptRecordUtil.get(current);
+        var fieldsChanged = gru.getChangedFieldNames();
+        var gr = getDefinitions(fieldsChanged);
+        /** @type {string} */
+        var fields = '';
+        while (gr.next())
+            fields += gr.field + ',';
+
+        if (fields.length > 0) {
+            fields = '[' + fields.substring(0, fields.length - 1) + ']';
+            gs.eventQueue('metric.update', current, fields, current.sys_mod_count, 'metric_update');
+        }
+
+        /**
+         * @param {string[]} fields 
+         * @returns {GlideAggregate}
+         */
+        function getDefinitions(fields) {
+            var gr = new GlideAggregate('metric_definition');
+            gr.addActiveQuery();
+            var tables = GlideDBObjectManager.getTables(current.getTableName());
+            gr.addQuery('table', tables);
+            gr.addQuery('field', fields);
+            gr.groupBy('field');
+            gr.query();
+            return gr;
+        }
+    }
+};

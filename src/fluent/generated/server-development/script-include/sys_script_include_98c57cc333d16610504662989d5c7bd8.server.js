@@ -1,0 +1,929 @@
+/**
+ * Used to validate the table and column names between two tables.
+ * 
+ * The following things are validated:
+ * 
+ * TABLE:
+ * - table sys_db_object
+ * - table sys_dictionary collection record
+ * - sys_number entry if the table has automatic numbering
+ * - sys_number_counter. if the table has automatic numbering sys_number_counter must be set to a higher value than the source table.
+ * 
+ * TABLE FIELDS:
+ * - sys_dictionary entry for the field
+ * - sys_documentation entry for the field. This includes the label and help text
+ * - sys_choice entry for the field if it is a choice field
+ * - sys_dictionary.attributes entry for the field
+ * - sys_dictionary_override entry for the field
+ * 
+ * @example
+ * // Assign a local reference to the validator
+ * var validator = KLF_TableValidator.TableValidator; 
+ * 
+ * // Set to true to disable debug logging. You can set this to false to see greater detail.
+ * KLF_TableValidator.quiet = true; 
+ * 
+ * // Validate the table and column names between two tables. First argument is the source table, second argument is the target table.
+ * // This will validate the table has been scoped properly and log the results to the system log.
+ * // The log uses "KLF_TableValidator" as the source.
+ * validator.validateAndLogResults('u_klf_test_task', 'x_53417_klf_test_test_task');
+ */
+
+/** 
+ * The keys are either a table name or a field name with the table name as a prefix.
+ * The values are an array of error messages for that field or table.
+ * @typedef {{
+ *   title:string,
+ *   columnNameResult: string,
+ *   results: {[fieldOrTable:string]:string[]}
+ * }} KLF_ValidationReport
+ */
+
+/**
+ * @typedef {{name:string,tableName:string,type:string}} KLF_ColumnValidator_Field
+ */
+
+/**
+ * @typedef {{sourceField:KLF_ColumnValidator_Field,targetField:KLF_ColumnValidator_Field}} KLF_ColumnValidator_Pair
+ */
+
+/**
+ * Object to validate the table and column names between two tables.
+ */
+var KLF_TableValidator = (function() {
+
+    var BULLET = '\u2022 ';
+    var CHECKMARK = '\u2713 ';
+    var XMARK = '\u2717 ';
+
+    var FLDS = {
+        SYS_CHOICE: [
+            'dependent_value',
+            'element',
+            'hint',
+            'inactive',
+            'label',
+            'language',
+            'sequence',
+            'synonyms',
+            'value'
+        ],
+
+        SYS_DB_OBJECT: [
+            'access',
+            'actions_access',
+            'alter_access',
+            'caller_access',
+            'client_scripts_access',
+            'configuration_access',
+            'create_access',
+            'delete_access',
+            'extension_model',
+            'is_extendable',
+            'label',
+            'live_feed_enabled',
+            'provider_class',
+            'read_access',
+            'scriptable_table',
+            'super_class',
+            'update_access',
+            'ws_access'
+        ],
+
+        SYS_DICTIONARY: [
+            'active',
+            'array',
+            'array_denormalized',
+            'audit',
+            'choice',
+            'choice_field',
+            'choice_table',
+            'column_label',
+            'comments',
+            'create_roles',
+            'defaultsort',
+            'default_value',
+            'delete_roles',
+            'dependent',
+            'dependent_on_field',
+            'display',
+            'dynamic_creation',
+            'dynamic_creation_script',
+            'dynamic_default_value',
+            'dynamic_ref_qual',
+            'element',
+            'element_reference',
+            'foreign_database',
+            'function_definition',
+            'function_field',
+            'internal_type',
+            'mandatory',
+            'max_length',
+            'next_element',
+            'primary',
+            'read_only',
+            'read_roles',
+            'reference',
+            'reference_cascade_rule',
+            'reference_floats',
+            'reference_key',
+            'reference_qual',
+            'reference_qual_condition',
+            'reference_type',
+            'spell_check',
+            'staged',
+            'table_reference',
+            'text_index',
+            'unique',
+            'use_dependent_field',
+            'use_dynamic_default',
+            'use_reference_qualifier',
+            'widget',
+            'write_roles',
+            'xml_view'
+        ],
+
+        SYS_DICTIONARY_OVERRIDE: [
+            'attributes',
+            'attributes_override',
+            'base_table',
+            'calculation',
+            'calculation_override',
+            'default_value',
+            'default_value_override',
+            'dependent',
+            'dependent_override',
+            'display_override',
+            'element',
+            'mandatory',
+            'mandatory_override',
+            'read_only',
+            'read_only_override',
+            'reference_qual',
+            'reference_qual_override'
+        ],
+
+        SYS_DOCUMENTATION: [
+            'element',
+            'help',
+            'hint',
+            'label',
+            'language',
+            'plural',
+            'url',
+            'url_target'
+        ]
+    };
+
+    var logSource = 'KLF_TableValidator';
+    /**
+     * Info level logging
+     * @param {string} message
+     */
+    function logInfo(message) {
+        gs.log('INFO: ' + message, logSource);
+    }
+
+    /**
+     * Info error logging
+     * @param {string} message
+     */
+    function logError(message) {
+        gs.log('ERROR: ' + message, logSource);
+    }
+
+    /**
+     * Debug logging
+     * @param {string} message
+     */
+    function logDebug(message) {
+        if (!KLF_TableValidator.quiet) {
+            gs.log('DEBUG: ' + message, logSource);
+        }
+    }
+
+    /**
+     * @param {string} tableName
+     * @param {string} fieldName
+     * @returns {KLF_ColumnValidator_Field}
+     */
+    function getFieldForTable(tableName, fieldName) {
+        var fieldGR = new GlideRecord(tableName);
+        var element = fieldGR.getElement(fieldName);
+        var type = String(element.getED().getInternalType());
+        return {
+            name: String(element.getName()),
+            tableName: String(element.getTableName()),
+            type: type
+        };
+    }
+
+    /**
+     * @param {string} tableName
+     * @returns {KLF_ColumnValidator_Field[]}
+     */
+    function getFieldsForTable(tableName) {
+        var fields = [];
+        var fieldGR = new GlideRecord(tableName);
+        var elements = fieldGR.getElements();
+        // @ts-ignore
+        for (var i = 0; i < elements.size(); i++) {
+            // @ts-ignore
+            var element = elements.get(i);
+            var type = String(element.getED().getInternalType());
+            if (type === 'related_tags') {
+                continue;
+            }
+            fields.push({
+                name: String(element.getName()),
+                tableName: String(element.getTableName()),
+                type: type
+            });
+        }
+
+        fields.sort(function(f1, f2) {
+            return f1.name.localeCompare(f2.name);
+        });
+
+        return fields;
+    }
+
+    /**
+     * @param {KLF_ColumnValidator_Field} field 
+     * @returns {GlideRecord} sys_dictionary
+     */
+    function getDictionaryEntry(field) {
+        var dictionaryEntry = new GlideRecord('sys_dictionary');
+        dictionaryEntry.addQuery('name', field.tableName);
+        dictionaryEntry.addQuery('element', field.name);
+        dictionaryEntry.query();
+        if (dictionaryEntry.getRowCount() === 0) {
+            throw ('No dictionary entry found for field: ' + JSON.stringify(field));
+        }
+        if (dictionaryEntry.getRowCount() > 1) {
+            throw ('Multiple dictionary entries found for field: ' + JSON.stringify(field));
+        }
+        dictionaryEntry.next();
+        return dictionaryEntry;
+    }
+
+
+    /**
+     * Looks up the dictionary entries based on the fields list
+     * @param {KLF_ColumnValidator_Field[]} fields 
+     * @returns {GlideRecord[]} sys_dictionary[]
+     */
+    function getDictionaryEntries(fields) {
+        var dictionaryEntries = fields.map(function(field) {
+            return getDictionaryEntry(field);
+        });
+        return dictionaryEntries;
+    }
+    /**
+     * Validates the fields in a column are the same between two tables
+     */
+    var _KLF_ColumnValidator = (function() {
+
+
+        /**
+         * Validates the fields in a column are the same between two tables
+         * @param {string} sourceTable - The source table to validate
+         * @param {string} targetTable - The target table to validate
+         * @param {string} columnName - The column name to validate
+         * @returns {string[]} - An array of error messages
+         */
+        function validateColumn(sourceTable, targetTable, columnName) {
+            var sourceField = getFieldForTable(sourceTable, columnName);
+            var targetField = getFieldForTable(targetTable, columnName);
+
+            return validateColumnPair(sourceTable, targetTable, { sourceField: sourceField, targetField: targetField });
+        }
+
+        /**
+         * Compares the sys_dictionary.attributes field between two dictionary entries
+         * @param {GlideRecord} sourceDictionaryEntry 
+         * @param {GlideRecord} targetDictionaryEntry 
+         * @returns {string[]}
+         */
+        function validateAttributes(sourceDictionaryEntry, targetDictionaryEntry) {
+            var excludedAttributes = ['edge_encryption_enabled'];
+            /**
+             * Attributes will look like this:
+             * ref_ac_columns=user_name;first_name;last_name,ref_ac_columns_search=true 
+             * 
+             * They get converted to a map like this:
+             * {
+             *   ref_ac_columns: 'user_name;first_name;last_name',
+             *   ref_ac_columns_search: 'true'
+             * }
+             * @param {string?} attributes 
+             * @returns {{[key:string]:string?}}
+             */
+            function toAttributeMap(attributes) {
+                if (!attributes) {
+                    return {};
+                }
+                var attributeParts = attributes.split(',');
+                return attributeParts.reduce(function(map, part) {
+                    var parts = part.split('=');
+                    if (parts.length === 2) {
+                        map[parts[0].trim()] = parts[1].trim();
+                    } else {
+                        map[parts[0].trim()] = null;
+                    }
+                    return map;
+                }, /** @type {{[key:string]:string?}} */ ({}));
+            }
+
+            /**
+             * @param {{[key:string]:string?}} sourceMap 
+             * @param {{[key:string]:string?}} targetMap 
+             * @returns {string[]}
+             */
+            function compareAttributeMap(sourceMap, targetMap) {
+                var errors = /** @type string[] */ ([]);
+
+                Object.keys(sourceMap).forEach(function(key) {
+                    if (excludedAttributes.indexOf(key) >= 0) {
+                        return;
+                    }
+
+                    if (targetMap[key] !== sourceMap[key]) {
+                        errors.push('Attribute ' + key + ' does not match: ' + sourceMap[key] + ' vs ' + targetMap[key]);
+                    }
+                });
+
+                return errors;
+            }
+
+            // Validate the attributes field
+            var sourceAttributes = sourceDictionaryEntry.getValue('attributes');
+            var sourceAttributeMap = toAttributeMap(sourceAttributes);
+            var targetAttributes = targetDictionaryEntry.getValue('attributes');
+            var targetAttributeMap = toAttributeMap(targetAttributes);
+            return compareAttributeMap(sourceAttributeMap, targetAttributeMap);
+        }
+
+
+        /**
+         * @param {string} sourceTable - The source table to validate
+         * @param {string} targetTable - The target table to validate
+         * @param {KLF_ColumnValidator_Pair} columnPair
+         * @returns {string[]}
+         */
+        function validateColumnPair(sourceTable, targetTable, columnPair) {
+            var errors = [];
+
+            var sourceField = columnPair.sourceField;
+            var targetField = columnPair.targetField;
+
+            if (sourceField.type !== targetField.type) {
+                errors.push('Field types do not match: ' + sourceField.name + ' (' + sourceField.type + ') vs ' + targetField.name + ' (' + targetField.type + ')');
+            }
+
+            // Add more validation logic here
+            // For example, you can check if the field is mandatory, unique, etc.
+            var sourceDictionaryEntry = getDictionaryEntry(sourceField);
+            var targetDictionaryEntry = getDictionaryEntry(targetField);
+            errors = errors.concat(validateColumnDictionaryEntry(sourceTable, sourceDictionaryEntry, targetTable, targetDictionaryEntry));
+
+            if (errors.length === 0) {
+                logDebug(CHECKMARK + ' "' + columnPair.sourceField.name + '" column configuration is valid');
+            } else {
+                logDebug(XMARK + ' "' + columnPair.sourceField.name + '" column configuration is not valid');
+            }
+
+            return errors;
+        }
+
+        /**
+         * @param {GlideRecord} sourceGR
+         * @param {GlideRecord} targetGR
+         * @param {string[]} fieldsToCheck
+         * @returns {string[]}
+         */
+        function validateGlideRecordFields(sourceGR, targetGR, fieldsToCheck) {
+            var errors = /** @type string[] */ ([]);
+            fieldsToCheck.forEach(function(field) {
+                var fieldType = String(sourceGR[field].getED().getInternalType());
+                var sourceValue = sourceGR.getValue(field);
+                var targetValue = targetGR.getValue(field);
+
+                if (fieldType === 'boolean') {
+                    if (Boolean(sourceGR[field]) !== Boolean(targetGR[field])) {
+                        errors.push('Field "' + sourceGR.getTableName() + '.' + field + '" does not match: "' + sourceValue + '" vs "' + targetValue + '"');
+                    }
+                } else {
+                    if (sourceValue !== targetValue) {
+                        errors.push('Field "' + sourceGR.getTableName() + '.' + field + '" does not match: "' + sourceValue + '" vs "' + targetValue + '"');
+                    }
+                }
+            });
+            return errors;
+        }
+
+        /**
+         * Validates the choices associated with a dictionary entry
+         * @param {GlideRecord} sourceDictionaryEntry 
+         * @param {GlideRecord} targetDictionaryEntry 
+         * @returns {string[]} errors
+         */
+        function validateChoices(sourceDictionaryEntry, targetDictionaryEntry) {
+            var errors = /** @type string[] */ ([]);
+
+            // Query source choices first
+            var sourceChoices = [];
+            var sourceChoiceGR = new GlideRecord('sys_choice');
+            sourceChoiceGR.addQuery('name', sourceDictionaryEntry.getValue('name'));
+            sourceChoiceGR.addQuery('element', sourceDictionaryEntry.getValue('element'));
+            sourceChoiceGR.query();
+            while (sourceChoiceGR.next()) {
+                sourceChoices.push({
+                    sysId: sourceChoiceGR.getUniqueValue(),
+                    name: sourceChoiceGR.getValue('name'),
+                    element: sourceChoiceGR.getValue('element'),
+                    label: sourceChoiceGR.getValue('label'),
+                    value: sourceChoiceGR.getValue('value'),
+                    sequence: sourceChoiceGR.getValue('sequence'),
+                    inactive: sourceChoiceGR.getValue('inactive')
+                });
+            }
+
+            // Loop through source choices and make sure there is a target choice that matches
+            sourceChoices.forEach(function(sourceChoice) {
+                var name = targetDictionaryEntry.getValue('name');
+                var element = targetDictionaryEntry.getValue('element');
+
+                var targetChoiceGR = new GlideRecord('sys_choice');
+                targetChoiceGR.addQuery('name', name);
+                targetChoiceGR.addQuery('element', element);
+                targetChoiceGR.addQuery('label', sourceChoice.label);
+                targetChoiceGR.addQuery('value', sourceChoice.value);
+                targetChoiceGR.query();
+                if (!targetChoiceGR.next()) {
+                    errors.push('Choice missing - ' + name + '.' + element + ': ' + sourceChoice.label + '[' + sourceChoice.value + ']');
+                    return;
+                }
+
+                var sourceChoiceGR = new GlideRecord('sys_choice');
+                if (!sourceChoiceGR.get(sourceChoice.sysId)) {
+                    throw 'Could not find source choice: ' + sourceChoice.sysId;
+                }
+
+                var recordErrors = validateGlideRecordFields(sourceChoiceGR, targetChoiceGR, FLDS.SYS_CHOICE);
+                if (recordErrors.length > 0) {
+                    var errorHeader = ('Choice mismatch - ' + sourceChoice.label + '[' + sourceChoice.value + ']');
+                    var subErrors = recordErrors.map(function(error) {
+                        return '  ' + error;
+                    }).join('\n');
+                    errors.push(errorHeader + '\n' + subErrors);
+                }
+            });
+
+            return errors;
+        }
+
+        /**
+         * Validates the sys_dictionary_override records associated with a dictionary entry
+         * @param {string} sourceTable
+         * @param {GlideRecord} sourceDictionaryEntry 
+         * @param {string} targetTable
+         * @param {GlideRecord} targetDictionaryEntry 
+         * @returns {string[]} errors
+         */
+        function validateDictionaryOverrides(sourceTable, sourceDictionaryEntry, targetTable, targetDictionaryEntry) {
+            var errors = /** @type string[] */ ([]);
+
+            // Get sys_dictionary_override table for source and target. There should be one for each
+            var sourceOverride = new GlideRecord('sys_dictionary_override');
+            sourceOverride.addQuery('name', sourceTable);
+            sourceOverride.addQuery('element', sourceDictionaryEntry.getValue('element'));
+            sourceOverride.query();
+            if (!sourceOverride.next()) {
+                // No need to validate if there is no override
+                return [];
+            }
+
+            var targetOverride = new GlideRecord('sys_dictionary_override');
+            targetOverride.addQuery('name', targetTable);
+            targetOverride.addQuery('element', targetDictionaryEntry.getValue('element'));
+            targetOverride.query();
+            if (!targetOverride.next()) {
+                errors.push('Dictionary override not found for column ' + targetDictionaryEntry.getValue('name') + '.' + targetDictionaryEntry.getValue('element'));
+                return errors;
+            }
+
+            // Validate the sys_dictionary_override fields
+            errors = errors.concat(validateGlideRecordFields(sourceOverride, targetOverride, FLDS.SYS_DICTIONARY_OVERRIDE));
+
+            return errors;
+        }
+
+        /**
+         * Validates the sys_documentation label associated with a dictionary entry
+         * @param {GlideRecord} sourceDictionaryEntry 
+         * @param {GlideRecord} targetDictionaryEntry 
+         * @returns {string[]} errors
+         */
+        function validateLabel(sourceDictionaryEntry, targetDictionaryEntry) {
+            var errors = [];
+
+            // Check the field label
+            // How to get the sys_documentation field related to a sys_dictionary?
+            /**
+             * @param {GlideRecord} dictionaryEntry
+             * @returns {GlideRecord?} sys_documentation | null
+             */
+            function getLabel(dictionaryEntry) {
+                var label = new GlideRecord('sys_documentation');
+                label.addQuery('element', dictionaryEntry.getValue('element'));
+                label.addQuery('name', dictionaryEntry.getValue('name'));
+                label.query();
+                if (label.next()) {
+                    return label;
+                }
+                return null;
+            }
+
+            var sourceLabel = getLabel(sourceDictionaryEntry);
+            var targetLabel = getLabel(targetDictionaryEntry);
+            if (!sourceLabel) {
+                errors.push('Could not find sys_documentation label for source: ' + sourceDictionaryEntry.getValue('name') + '.' + sourceDictionaryEntry.getValue('element'));
+            }
+            if (!targetLabel) {
+                errors.push('Could not find sys_documentation  label for target: ' + targetDictionaryEntry.getValue('name') + '.' + targetDictionaryEntry.getValue('element'));
+            }
+
+            if (sourceLabel && targetLabel) {
+                errors = errors.concat(validateGlideRecordFields(sourceLabel, targetLabel, FLDS.SYS_DOCUMENTATION));
+            }
+
+            return errors;
+        }
+
+        /**
+         * Returns true if this dictionary entry has choices
+         * @param {GlideRecord} dictionaryEntry
+         * @returns {boolean}
+         */
+        function isChoice(dictionaryEntry) {
+            var choiceType = dictionaryEntry.getValue('choice');
+            return choiceType == '3' || choiceType == '1';
+        }
+
+        /**
+         * Validates the Calculated Value section of sys_dictionary
+         * @param {GlideRecord} sourceDictionaryEntry 
+         * @param {GlideRecord} targetDictionaryEntry 
+         * @returns {string[]}
+         */
+        function validateCalculatedValue(sourceDictionaryEntry, targetDictionaryEntry) {
+
+            var errors = [];
+
+            // Validate the calculation field
+            var sourceVirtual = sourceDictionaryEntry.getValue('virtual');
+            var targetVirtual = targetDictionaryEntry.getValue('virtual');
+            if (sourceVirtual !== targetVirtual) {
+                errors.push('"Calculated[virtual]" value does not match. Check "Calculated Value" section: ' + sourceVirtual + ' vs ' + targetVirtual);
+            }
+
+            // eslint-disable-next-line no-extra-boolean-cast
+            if (Boolean(sourceDictionaryEntry.virtual)) {
+                var sourceCalculation = sourceDictionaryEntry.getValue('calculation');
+                var targetCalculation = targetDictionaryEntry.getValue('calculation');
+                if (sourceCalculation !== targetCalculation) {
+                    errors.push('"Calculated[calculation]" value does not match. Check "Calculated Value" section: ' + sourceCalculation + ' vs ' + targetCalculation);
+                }
+            }
+
+            return errors;
+        }
+
+        /**
+         * Validates the dictionary entry fields for the columns are the same
+         * @param {string} sourceTable
+         * @param {GlideRecord} sourceDictionaryEntry 
+         * @param {string} targetTable
+         * @param {GlideRecord} targetDictionaryEntry 
+         * @returns {string[]}
+         */
+        function validateColumnDictionaryEntry(sourceTable, sourceDictionaryEntry, targetTable, targetDictionaryEntry) {
+            var errors = /** @type string[] */ ([]);
+
+            // Validate the sys_dictionary record for the field
+            errors = errors.concat(validateGlideRecordFields(sourceDictionaryEntry, targetDictionaryEntry, FLDS.SYS_DICTIONARY));
+
+            // Validate the associated sys_dictionary.attributes 
+            errors = errors.concat(validateCalculatedValue(sourceDictionaryEntry, targetDictionaryEntry));
+
+            // Check the field dictionary overrides
+            errors = errors.concat(validateDictionaryOverrides(sourceTable, sourceDictionaryEntry, targetTable, targetDictionaryEntry));
+
+            // Validate the associated sys_dictionary.attributes 
+            errors = errors.concat(validateAttributes(sourceDictionaryEntry, targetDictionaryEntry));
+
+            // Validate the associated sys_documentation record
+            errors = errors.concat(validateLabel(sourceDictionaryEntry, targetDictionaryEntry));
+
+            // Check field choices if the field is a choice field
+            if (isChoice(sourceDictionaryEntry)) {
+                errors = errors.concat(validateChoices(sourceDictionaryEntry, targetDictionaryEntry));
+            }
+
+            return errors;
+        }
+
+        return {
+            validateColumn: validateColumn,
+            validateColumnPair: validateColumnPair,
+            validateGlideRecordFields: validateGlideRecordFields
+        };
+
+    })();
+
+    var _KLF_TableValidator = (function() {
+
+        /**
+         * @param {KLF_ValidationReport} report
+         * @returns {string} - A formatted report of the validation results
+         */
+        function formatReport(report) {
+            var _results = report.results;
+            var filteredResults = Object.keys(_results).reduce(function(filteredResults, fieldOrTable) {
+                var results = _results[fieldOrTable];
+                if (results.length === 0) {
+                    return filteredResults;
+                } else {
+                    filteredResults[fieldOrTable] = results;
+                    return filteredResults;
+                }
+            }, /** @type {{[fieldOrTable:string]:string[]}} */ ({}));
+
+            var separator = '\n=======================================================================================================================================\n';
+
+            if (Object.keys(filteredResults).length === 0) {
+                return '\n\n' + report.title + '\n\n' + CHECKMARK + ' No errors found' + separator;
+            }
+
+
+            var formattedResults = Object.keys(filteredResults).map(function(fieldOrTable) {
+                var results = filteredResults[fieldOrTable];
+                var formattedResults = results.map(function(result) {
+                    return BULLET + result;
+                });
+                return '\n' + fieldOrTable + '\n\n' + formattedResults.join('\n\n');
+            });
+
+
+            formattedResults.unshift('\n' + report.columnNameResult);
+            formattedResults.unshift('\n\n' + report.title);
+            formattedResults.push('');
+
+            return formattedResults.join(separator);
+        }
+
+        /**
+         * Validates the fields in a column are the same between two tables
+         * @param {KLF_ColumnValidator_Field[]} sourceFields - The source table to validate
+         * @param {KLF_ColumnValidator_Field[]} targetFields - The target table to validate
+         * @returns {string[]} - An array of error messages
+         */
+        function validateColumnNames(sourceFields, targetFields) {
+            var errors = [];
+
+            // Make sure the field names are the same
+            var sourceFieldNames = sourceFields.map(function(field) {
+                return field.name;
+            });
+
+            var targetFieldNames = targetFields.map(function(field) {
+                return field.name;
+            });
+            var missingFields = sourceFieldNames.filter(function(fieldName) {
+                return targetFieldNames.indexOf(fieldName) === -1;
+            });
+            if (missingFields.length > 0) {
+                errors.push('Missing columns in target table: ' + missingFields.join(','));
+            }
+
+
+            if (errors.length === 0) {
+                logDebug(CHECKMARK + ' All table columns exist in target table');
+            } else {
+                logDebug(XMARK + ' Table columns are missing');
+            }
+
+            return errors;
+        }
+
+        /**
+         * Zips the source and target fields together. If
+         * the source field is not found in the target
+         * table, it will not be included in the result.
+         * @param {KLF_ColumnValidator_Field[]} sourceFields 
+         * @param {KLF_ColumnValidator_Field[]} targetFields 
+         * @returns {KLF_ColumnValidator_Pair[]}
+         */
+        function pairColumns(sourceFields, targetFields) {
+            return sourceFields.map(function(sourceField) {
+                var targetField = null;
+                for (var i = 0; i < targetFields.length; i++) {
+                    var candidateTargetField = targetFields[i];
+                    if (candidateTargetField.name === sourceField.name) {
+                        targetField = candidateTargetField;
+                        break;
+                    }
+                }
+                if (!targetField) {
+                    return null;
+                }
+                return {
+                    sourceField: sourceField,
+                    targetField: targetField
+                };
+            }).filter(function(pair) {
+                return pair !== null;
+            });
+        }
+
+        /**
+         * Validates the source and target tables objects. This is the object that holds
+         * the table name and other metadata about the table, as well as the fields in the table.
+         * @param {string} sourceTableName 
+         * @param {string} targetTableName 
+         * @returns {string[]} Any errors that were found
+         */
+        function validateTableDbObject(sourceTableName, targetTableName) {
+            logDebug('Validating table sys_db_object for ' + sourceTableName + ' against ' + targetTableName);
+
+            var errors = [];
+
+            var sourceDbObject = new GlideRecord('sys_db_object');
+            if (!sourceDbObject.get('name', sourceTableName)) {
+                throw new Error('Source table ' + sourceTableName + ' does not exist in sys_db_object');
+            }
+
+            var targetDbObject = new GlideRecord('sys_db_object');
+            if (!targetDbObject.get('name', targetTableName)) {
+                throw new Error('Target table ' + targetTableName + ' does not exist in sys_db_object');
+            }
+
+            // Validate number ref
+            if (!sourceDbObject.number_ref.nil()) {
+                // Make sure the sys_number_counter is set to a higher value than the source table
+                if (targetDbObject.number_ref.nil()) {
+                    errors.push('Target table ' + targetTableName + ' does not have a number reference');
+                }
+
+                var sourceNumberPrefix = sourceDbObject.number_ref.prefix.toString();
+                var targetNumberPrefix = targetDbObject.number_ref.prefix.toString();
+                if (sourceNumberPrefix !== targetNumberPrefix) {
+                    errors.push(
+                        'Target table ' +
+                        targetTableName +
+                        ' does not have the same number reference\n  prefix as source table ' +
+                        sourceTableName + ' - "' + sourceNumberPrefix + '" vs "' + targetNumberPrefix + '"');
+                }
+
+                // Make sure the sys_number_counter is set to a higher value than the source table
+                /**
+                 * @param {string} tableName
+                 * @returns {GlideRecord?}
+                 */
+                // eslint-disable-next-line no-inner-declarations
+                function getNumberCounter(tableName) {
+                    var counter = new GlideRecord('sys_number_counter');
+                    if (!counter.get('table', tableName)) {
+                        errors.push('Number Counter not found for table ' + tableName);
+                        return null;
+                    }
+                    return counter;
+                }
+                var sourceNumberCounter = getNumberCounter(sourceTableName);
+                var targetNumberCounter = getNumberCounter(targetTableName);
+                if (sourceNumberCounter && targetNumberCounter) {
+                    var sourceNumber = Number(sourceNumberCounter.getValue('number'));
+                    var targetNumber = Number(targetNumberCounter.getValue('number'));
+                    if (targetNumber < sourceNumber) {
+                        errors.push(
+                            'Target table ' +
+                            targetTableName +
+                            ' does not have a higher number reference\n  counter than source table ' +
+                            sourceTableName + ' [' + sourceNumber + '] vs ' + targetTableName + '[' + targetNumber + ']');
+                    }
+                }
+            }
+
+            // Validate sys_db_object fields
+            errors = errors.concat(_KLF_ColumnValidator.validateGlideRecordFields(sourceDbObject, targetDbObject, FLDS.SYS_DB_OBJECT));
+
+            return errors;
+        }
+
+        /**
+         * Validates the sys_dictionary entry for the source and target tables. This is
+         * the "collection" record that is in the sys_dictionary table.
+         * @param {string} sourceTable 
+         * @param {string} targetTable 
+         * @returns {string[]} Any errors that were found
+         */
+        function validateSysDictionaryCollection(sourceTable, targetTable) {
+            var sourceDictionary = new GlideRecord('sys_dictionary');
+            sourceDictionary.addQuery('name', sourceTable);
+            sourceDictionary.addQuery('internal_type', 'collection');
+            sourceDictionary.query();
+            if (!sourceDictionary.next()) {
+                throw new Error('Source table ' + sourceTable + ' does not exist in sys_dictionary as a collection');
+            }
+
+            var targetDictionary = new GlideRecord('sys_dictionary');
+            targetDictionary.addQuery('name', targetTable);
+            targetDictionary.addQuery('internal_type', 'collection');
+            targetDictionary.query();
+            if (!targetDictionary.next()) {
+                throw new Error('Target table ' + targetTable + ' does not exist in sys_dictionary as a collection');
+            }
+
+            return _KLF_ColumnValidator.validateGlideRecordFields(sourceDictionary, targetDictionary, FLDS.SYS_DICTIONARY);
+        }
+
+        /**
+         * @param {string} sourceTable 
+         * @param {string} targetTable 
+         */
+        function validateAndLogResults(sourceTable, targetTable) {
+            var report = validate(sourceTable, targetTable);
+            var formattedReport = formatReport(report);
+            logInfo(formattedReport);
+        }
+
+        /**
+         * @param {string} sourceTable 
+         * @param {string} targetTable 
+         * @returns {KLF_ValidationReport}
+         */
+        function validate(sourceTable, targetTable) {
+            logDebug('Validating ' + sourceTable + ' against ' + targetTable);
+            var errors = /** @type string[] */ ([]);
+
+            /** @type {{[fieldOrTable:string]:string[]}} */
+            var results = {};
+            results[sourceTable] = [];
+
+            var sourceGR = new GlideRecord(sourceTable);
+            if (!sourceGR.isValid()) {
+                throw new Error('Invalid source table name ' + sourceTable);
+            }
+
+            var targetGR = new GlideRecord(sourceTable);
+            if (!targetGR.isValid()) {
+                throw new Error('Invalid target table name ' + targetTable);
+            }
+
+            errors = errors.concat(validateTableDbObject(sourceTable, targetTable));
+
+            errors = errors.concat(validateSysDictionaryCollection(sourceTable, targetTable));
+
+            // First we need to get a list of all the fields in the source table
+            var sourceFields = getFieldsForTable(sourceTable);
+            var targetFields = getFieldsForTable(targetTable);
+
+            // We need to make sure each field in the column is the same between the two tables
+            var columnNameErrors = validateColumnNames(sourceFields, targetFields);
+            var columnNameResult = (columnNameErrors.length === 0) ?
+                (CHECKMARK + ' All table columns exist in target table') :
+                (XMARK + ' Table columns are missing');
+            errors = errors.concat(columnNameErrors);
+
+            var columnPairs = pairColumns(sourceFields, targetFields);
+
+            columnPairs.forEach(function(columnPair) {
+                var source = columnPair.sourceField;
+                results[sourceTable + '.' + source.name] = _KLF_ColumnValidator.validateColumnPair(sourceTable, targetTable, columnPair);
+            });
+
+            // Add your validation logic here
+            results[sourceTable] = errors;
+            return {
+                title: 'Validation Results for ' + sourceTable + ' against ' + targetTable,
+                columnNameResult: columnNameResult,
+                results: results
+            };
+        }
+
+        return {
+            validate: validate,
+            validateAndLogResults: validateAndLogResults,
+            validateColumnNames: validateColumnNames,
+            pairColumns: pairColumns,
+            formatReport: formatReport
+        };
+    })();
+
+    return {
+        ColumnValidator: _KLF_ColumnValidator,
+        TableValidator: _KLF_TableValidator,
+        quiet: true
+    };
+})();

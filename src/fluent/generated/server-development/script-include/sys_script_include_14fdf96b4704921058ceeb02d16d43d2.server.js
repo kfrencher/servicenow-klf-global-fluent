@@ -1,0 +1,703 @@
+function KLF_RecordSyncTest() {
+    var testScopeName = 'x_53417_test_scope';
+    var testTableName = gs.getProperty('KLF_RecordSyncTest.testTableName');
+
+    function init() {
+        var testUtils = new global.KLF_TestUtils();
+        var adminUser = testUtils.getOrCreateAdminUser();
+        var password = testUtils.setPasswordForUser(adminUser);
+        var recordSync = new global.KLF_RecordSync(KLF_RecordSyncTest.createConnectionConfig(adminUser.getValue('user_name'), password));
+        return {
+            adminUser: adminUser,
+            recordSync: recordSync,
+            testUtils: testUtils
+        };
+    }
+
+    describe('KLF_RecordSync.loadRecordByGlideUpdateManager2', function() {
+        it('should load the xml record', function() {
+            var sysId = '3e7b784447d4161058ceeb02d16d4335';
+            var xml =
+                '<cmn_building>' +
+                '<contact display_value="Abel Tuter">62826bf03710200044e0bfc8bcbe5df1</contact>' +
+                '<floors>4</floors>' +
+                '<location display_value="100 South Charles Street, Baltimore,MD">25ab9c4d0a0a0bb300f7dabdc0ca7c1c</location>' +
+                '<name>building name</name>' +
+                '<notes>test</notes>' +
+                '<sys_created_by>admin</sys_created_by>' +
+                '<sys_created_on>2024-08-23 15:14:50</sys_created_on>' +
+                '<sys_id>' + sysId + '</sys_id>' +
+                '<sys_mod_count>0</sys_mod_count>' +
+                '<sys_updated_by>admin</sys_updated_by>' +
+                '<sys_updated_on>2024-08-23 15:14:50</sys_updated_on>' +
+                '</cmn_building>';
+
+            global.KLF_RecordSync.loadRecordByGlideUpdateManager2(xml);
+
+            var gr = new GlideRecord('cmn_building');
+            expect(gr.get(sysId)).toBeTruthy('Should have loaded the record');
+        });
+
+        it('should not throw when XML is null', function() {
+            expect(function() {
+                // @ts-ignore
+                global.KLF_RecordSync.loadRecordByGlideUpdateManager2(null);
+            }).not.toThrow();
+        });
+
+        it('should not throw when XML is empty', function() {
+            expect(function() {
+                global.KLF_RecordSync.loadRecordByGlideUpdateManager2('');
+            }).not.toThrow();
+        });
+    });
+
+    describe('syncRecord()', function() {
+        /** @type {{recordSync:global.KLF_RecordSync,adminUser:GlideRecord,testUtils:global.KLF_TestUtils}} */
+        var testFixtures;
+        beforeAll(function() {
+            testFixtures = init();
+        });
+
+        afterAll(function() {
+            testFixtures.testUtils.cleanup();
+        });
+
+        /** @type {global.KLF_TestUtils} */
+        var testUtils;
+        beforeEach(function() {
+            testUtils = new global.KLF_TestUtils();
+        });
+
+        afterEach(function() {
+            testUtils.cleanup();
+        });
+
+        it('should sync a record', function() {
+            // Create a record that has related records
+            // Using this as the test data to simulate sending
+            var gr = new GlideRecord(testTableName);
+            gr.newRecord();
+            gr.short_description = 'Test description';
+            gr.my_currency.setDisplayValue('USD;100.00');
+            gr.my_price.setDisplayValue('USD;200.00');
+            gr.my_journal = 'Test journal';
+            gr.update();
+
+            var attachment = new GlideSysAttachment();
+            attachment.write(gr, 'test.txt', 'text/plain', 'This is a test attachment');
+
+            // Get the XML for the record. This is the data that will actually be sent
+            var recordSync = testFixtures.recordSync;
+            var unloadedResult = recordSync.unloadRecordWithRelatedRecords(gr);
+            var testRecordSysId = gr.getUniqueValue();
+
+            // Delete this record to simulate that it was loaded from another instance
+            gr = new GlideRecord(testTableName);
+            gr.get(testRecordSysId);
+            gr.deleteRecord();
+
+            // Record should not exist now
+            gr = new GlideRecord(testTableName);
+            expect(gr.get(testRecordSysId)).toBeFalse('Should not have record');
+
+            // Send the record to the remote instance
+            var recordSyncSpy = spyOn(global.KLF_RecordSync.prototype, 'unloadRecordWithRelatedRecords');
+            recordSyncSpy.and.returnValue(unloadedResult);
+            var response = recordSync.syncRecord(gr);
+            recordSyncSpy.and.callThrough();
+
+            expect(response.success).toBeTrue('Should have synced the record');
+
+            // Record should exist now
+            gr = new GlideRecord(testTableName);
+            if (!gr.get(testRecordSysId)) {
+                fail('Record should exist');
+                return;
+            }
+
+            // Get all the related records
+            var result = recordSync.unloadRecordWithRelatedRecords(gr);
+            var resultXml = recordSync.documentToString(result.document, true);
+            var xmlDocument2 = new XMLDocument2();
+            xmlDocument2.parseXML(resultXml);
+
+            expect(xmlDocument2.getFirstNode('//' + testTableName)).not.toBeNull('Should have record');
+            expect(xmlDocument2.getNodeText('//fx_currency_instance/reference_amount')).toBe('100', 'Should have currency');
+            expect(xmlDocument2.getNodeText('//fx_price/reference_amount')).toBe('200', 'Should have price');
+            expect(xmlDocument2.getNodeText('//sys_journal_field/value')).toBe('Test journal', 'Should have journal');
+            expect(xmlDocument2.getNodeText('//sys_attachment/file_name')).toBe('test.txt', 'Should have attachment');
+        });
+    });
+
+    describe('clearRemoteTestData', function() {
+        it('should clear the test data on the remote instance', function() {
+            var response = KLF_RecordSyncTest.clearRemoteTestData();
+            expect(response.getStatusCode()).toBe(200, 'Should have cleared the test data');
+        });
+    });
+
+    describe('syncTable()', function() {
+        // Create a little bit of test data
+        function createRandomTestRecord() {
+            var gr = new GlideRecord('task');
+            gr.newRecord();
+            gr.short_description = 'KLF_RecordSyncTest - ' + gs.generateGUID();
+            gr.update();
+            testUtils.recordTracker.trackByGlideRecord(gr);
+            return gr;
+        }
+
+        /** @type {{recordSync:global.KLF_RecordSync,testUtils:global.KLF_TestUtils}} */
+        var testFixtures;
+        beforeAll(function() {
+            var testUtils = new global.KLF_TestUtils();
+            var recordSync = new global.KLF_RecordSync(KLF_RecordSyncTest.createRemoteConnectionConfig());
+            testFixtures = {
+                recordSync: recordSync,
+                testUtils: testUtils
+            };
+        });
+
+        afterAll(function() {
+            testFixtures.testUtils.cleanup();
+        });
+
+        /** @type {global.KLF_TestUtils} */
+        var testUtils;
+        beforeEach(function() {
+            testUtils = new global.KLF_TestUtils();
+        });
+
+        afterEach(function() {
+            testUtils.cleanup();
+            KLF_RecordSyncTest.clearRemoteTestData();
+        });
+
+        it('should sync a table', function() {
+            var expectedRecordCount = 9;
+            var manifest = new global.KLF_RecordSync.Manifest();
+            for (var i = 0; i < expectedRecordCount; i++) {
+                manifest.addRecordByGlideRecord(createRandomTestRecord());
+            }
+
+            var recordSync = testFixtures.recordSync;
+            var failedRecordManifest = recordSync.syncTable('task', 'short_descriptionLIKEKLF_RecordSyncTest');
+
+            expect(failedRecordManifest.isEmpty()).toBeTrue('Manifest should be empty because all records were synced');
+
+            // Verify that the records were sent to the remote instance
+            var missingRecordManifest = recordSync.validateSync(manifest);
+            if (missingRecordManifest) {
+                expect(missingRecordManifest.isEmpty()).toBeTrue('Should not have any missing records');
+            } else {
+                fail('Missing record manifest should not be null');
+            }
+        });
+
+        it('should only sync records that are included in the filter', function() {
+            // I need to create some records to be synced
+            var expectedRecordCount = 9;
+            var manifest = new global.KLF_RecordSync.Manifest();
+            for (var i = 0; i < expectedRecordCount; i++) {
+                manifest.addRecordByGlideRecord(createRandomTestRecord());
+            }
+
+            var recordShouldNotBeSent = new GlideRecord('task');
+            recordShouldNotBeSent.newRecord();
+            recordShouldNotBeSent.short_description = 'Do not send' + gs.generateGUID();
+            recordShouldNotBeSent.update();
+            testUtils.recordTracker.trackByGlideRecord(recordShouldNotBeSent);
+            manifest.addRecordByGlideRecord(recordShouldNotBeSent);
+
+            var recordSync = testFixtures.recordSync;
+            var failedRecordManifest = recordSync.syncTable('task', 'short_descriptionLIKEKLF_RecordSyncTest');
+
+            expect(failedRecordManifest.isEmpty()).toBeTrue('Should not have any failed records');
+
+            // Verify that the records were sent to the remote instance
+            var missingRecordManifest = recordSync.validateSync(manifest);
+            if (missingRecordManifest) {
+                expect(missingRecordManifest.getSysIdsForTable('task')).toContain(recordShouldNotBeSent.getUniqueValue(), 'Should have missing record');
+            } else {
+                fail('Missing record manifest should not be null');
+            }
+        });
+
+        it('should throw an error if the table does not exist', function() {
+            var recordSync = testFixtures.recordSync;
+            expect(function() {
+                recordSync.syncTable('not_a_table');
+            }).toThrow();
+        });
+
+    });
+
+    describe('syncAllDataInScope()', function() {
+        /**
+         * @returns {{tasks:GlideRecord[],requests:GlideRecord[],manifest:global.KLF_RecordSync.Manifest}}
+         */
+        function createTestData() {
+            // Should be a couple tables in the test scope
+            // One for task and one for request
+            var manifest = new global.KLF_RecordSync.Manifest();
+
+            // Create a couple records for each table
+            var taskTableName = testScopeName + '_task';
+            var task1 = new GlideRecord(taskTableName);
+            task1.newRecord();
+            task1.short_description = 'Task 1';
+            task1.update();
+            testUtils.recordTracker.trackByGlideRecord(task1);
+            manifest.addRecordByGlideRecord(task1);
+
+            var task2 = new GlideRecord(taskTableName);
+            task2.newRecord();
+            task2.short_description = 'Task 2';
+            task2.update();
+            testUtils.recordTracker.trackByGlideRecord(task2);
+            manifest.addRecordByGlideRecord(task2);
+
+            var requestTableName = testScopeName + '_request';
+            var request1 = new GlideRecord(requestTableName);
+            request1.newRecord();
+            request1.short_description = 'Request 1';
+            request1.update();
+            testUtils.recordTracker.trackByGlideRecord(request1);
+            manifest.addRecordByGlideRecord(request1);
+
+            var request2 = new GlideRecord(requestTableName);
+            request2.newRecord();
+            request2.short_description = 'Request 2';
+            request2.update();
+            testUtils.recordTracker.trackByGlideRecord(request2);
+            manifest.addRecordByGlideRecord(request2);
+
+            return {
+                tasks: [task1, task2],
+                requests: [request1, request2],
+                manifest: manifest
+            };
+        }
+
+        /** @type {{recordSync:global.KLF_RecordSync,testUtils:global.KLF_TestUtils}} */
+        var testFixtures;
+        beforeAll(function() {
+            var testUtils = new global.KLF_TestUtils();
+            var recordSync = new global.KLF_RecordSync(KLF_RecordSyncTest.createRemoteConnectionConfig());
+            testFixtures = {
+                recordSync: recordSync,
+                testUtils: testUtils
+            };
+        });
+
+        afterAll(function() {
+            testFixtures.testUtils.cleanup();
+        });
+
+        /** @type {global.KLF_TestUtils} */
+        var testUtils;
+        beforeEach(function() {
+            testUtils = new global.KLF_TestUtils();
+        });
+
+        afterEach(function() {
+            testUtils.cleanup();
+            KLF_RecordSyncTest.clearRemoteTestData();
+        });
+
+        it('should sync all data in scope', function() {
+            var manifest = createTestData().manifest;
+            var recordSync = testFixtures.recordSync;
+
+            recordSync.syncAllDataInScope(testScopeName);
+
+            // Verify that the records were sent to the remote instance
+            var missingRecordManifest = recordSync.validateSync(manifest);
+            if (missingRecordManifest) {
+                expect(missingRecordManifest.isEmpty()).toBeTrue('Should not have any missing records');
+            } else {
+                fail('Missing record manifest should not be null');
+            }
+        });
+
+        it('should not sync data that is in the excluded tables list', function() {
+            var testData = createTestData();
+            var requests = testData.requests;
+            var tasks = testData.tasks;
+
+            var recordSync = testFixtures.recordSync;
+            recordSync.syncAllDataInScope(testScopeName, [testScopeName + '_request']);
+
+            // All tasks should be synced because they aren't in the excluded tables list
+            var taskManifest = new global.KLF_RecordSync.Manifest();
+            tasks.forEach(function(task) {
+                taskManifest.addRecordByGlideRecord(task);
+            });
+            var missingTaskManifest = recordSync.validateSync(taskManifest);
+            if (missingTaskManifest) {
+                expect(missingTaskManifest.isEmpty()).toBeTrue('Should not have any missing records');
+            } else {
+                fail('Missing task manifest should not be null');
+            }
+
+            // The requests should not be synced because they are in the excluded tables list
+            var requestManifest = new global.KLF_RecordSync.Manifest();
+            requests.forEach(function(request) {
+                requestManifest.addRecordByGlideRecord(request);
+            });
+            var missingRequestManifest = recordSync.validateSync(requestManifest);
+            if (missingRequestManifest) {
+                gs.info(JSON.stringify(missingRequestManifest.toObj(), null, 4));
+                expect(missingRequestManifest.isEmpty()).toBeFalse('Should have missing excluded record');
+            } else {
+                fail('Missing request manifest should not be null');
+            }
+        });
+
+    });
+
+    describe('unloadRecord()', function() {
+        /** @type {{recordSync:global.KLF_RecordSync,adminUser:GlideRecord,testUtils:global.KLF_TestUtils}} */
+        var testFixtures;
+        beforeAll(function() {
+            testFixtures = init();
+        });
+
+        afterAll(function() {
+            testFixtures.testUtils.cleanup();
+        });
+
+        /** @type {global.KLF_TestUtils} */
+        var testUtils;
+        beforeEach(function() {
+            testUtils = new global.KLF_TestUtils();
+        });
+
+        afterEach(function() {
+            testUtils.cleanup();
+        });
+
+
+        function createTestRecord() {
+            var gr = new GlideRecord(testTableName);
+            gr.newRecord();
+            gr.short_description = 'Test description';
+            gr.my_currency.setDisplayValue('USD;100.00');
+            gr.my_price.setDisplayValue('USD;200.00');
+            gr.my_journal = 'Test journal';
+            gr.update();
+            return gr;
+        }
+
+        it('should unload a record', function() {
+            var recordSync = testFixtures.recordSync;
+
+            var gr = createTestRecord();
+
+            var result = recordSync.unloadRecord(gr);
+
+            var xmlDocument2 = new XMLDocument2();
+            xmlDocument2.parseXML(recordSync.documentToString(result));
+            expect(xmlDocument2.getFirstNode('//' + testTableName)).not.toBeNull('Should have record');
+
+        });
+
+        it('should unload the record to the existing document if provided', function() {
+            var recordSync = testFixtures.recordSync;
+
+            var gr = createTestRecord();
+
+            var expectedDocument = recordSync.createUnloadDocument();
+
+            var actualDocument = recordSync.unloadRecord(gr, expectedDocument);
+
+            var xmlDocument2 = new XMLDocument2();
+            xmlDocument2.parseXML(recordSync.documentToString(actualDocument));
+            expect(xmlDocument2.getFirstNode('//' + testTableName)).not.toBeNull('Should have record');
+            expect(expectedDocument).toBe(actualDocument, 'Should be the same document');
+        });
+
+        it('should not allow the record to be saved', function() {
+            var recordSync = testFixtures.recordSync;
+
+            var gr = createTestRecord();
+
+            recordSync.unloadRecord(gr);
+
+            // Should return null if record failed to update
+            expect(gr.update()).toBeNull('Should not be able to update record');
+        });
+
+        it('should unload the extended record if the base record is provided', function() {
+            var recordSync = testFixtures.recordSync;
+
+            var extendedRecord = new GlideRecord('incident');
+            extendedRecord.newRecord();
+            extendedRecord.short_description = 'Test incident';
+            extendedRecord.update();
+            testUtils.recordTracker.trackByGlideRecord(extendedRecord);
+
+            var baseRecord = new GlideRecord('task');
+            baseRecord.get('sys_id', extendedRecord.getUniqueValue());
+
+            var document = recordSync.unloadRecord(baseRecord);
+            var xml = recordSync.documentToString(document);
+            gs.log(xml);
+            var xmlDocument2 = new XMLDocument2();
+            xmlDocument2.parseXML(xml);
+            expect(xmlDocument2.getFirstNode('//incident')).not.toBeNull('Should have extended record');
+        });
+
+        it('should use group mapping if provided', function() {
+            // Create the test data
+            var group1 = testUtils.createGroup(testUtils.getRandomGroupName());
+            var group2 = testUtils.createGroup(testUtils.getRandomGroupName());
+            var task = new GlideRecord('task');
+            task.newRecord();
+            task.assignment_group = group1.getUniqueValue();
+            task.group_list = [group1.getUniqueValue(), group2.getUniqueValue()].join(',');
+            task.update();
+            testUtils.recordTracker.trackByGlideRecord(task);
+
+            // Create a group mapping to use
+            /** @type {{[sysId:string]:string}} */
+            var mapping = {};
+            mapping[group1.getUniqueValue()] = 'group1';
+            mapping[group2.getUniqueValue()] = 'group2';
+            var recordSync = testFixtures.recordSync;
+            recordSync.groupMapping = {
+                hasMissingGroups: false,
+                missingGroups: [],
+                success: true,
+                mapping: mapping
+            };
+
+            // Unload the record which should use the mapping
+            var document = recordSync.unloadRecord(task);
+
+            var xml = recordSync.documentToString(document);
+            var xmlDocument2 = new XMLDocument2();
+            xmlDocument2.parseXML(xml);
+
+            expect(xmlDocument2.getNodeText('//assignment_group')).toBe('group1', 'Should have mapped assignment group');
+            expect(xmlDocument2.getNodeText('//group_list')).toContain('group1', 'Should have mapped group1');
+            expect(xmlDocument2.getNodeText('//group_list')).toContain('group2', 'Should have mapped group2');
+        });
+
+        it('should use user mapping if provided', function() {
+            // Create the test data
+            var user1 = testUtils.createUser(testUtils.getRandomUsername());
+            var user2 = testUtils.createUser(testUtils.getRandomUsername());
+            var task = new GlideRecord('task');
+            task.newRecord();
+            task.assigned_to = user1.getUniqueValue();
+            task.additional_assignee_list = [user1.getUniqueValue(), user2.getUniqueValue()].join(',');
+            task.update();
+            testUtils.recordTracker.trackByGlideRecord(task);
+
+            // Create a user mapping to use
+            /** @type {{[sysId:string]:string}} */
+            var mapping = {};
+            mapping[user1.getUniqueValue()] = 'user1';
+            mapping[user2.getUniqueValue()] = 'user2';
+            var recordSync = testFixtures.recordSync;
+            recordSync.userMapping = {
+                hasMissingUsers: false,
+                missingUsers: [],
+                success: true,
+                mapping: mapping
+            };
+
+            // Unload the record which should use the mapping
+            var document = recordSync.unloadRecord(task);
+
+            var xml = recordSync.documentToString(document);
+            var xmlDocument2 = new XMLDocument2();
+            xmlDocument2.parseXML(xml);
+
+            expect(xmlDocument2.getNodeText('//assigned_to')).toBe('user1', 'Should have mapped assigned to');
+            expect(xmlDocument2.getNodeText('//additional_assignee_list')).toContain('user1', 'Should have mapped user1');
+            expect(xmlDocument2.getNodeText('//additional_assignee_list')).toContain('user2', 'Should have mapped user2');
+        });
+    });
+
+
+    describe('unloadRecordWithRelatedRecords()', function() {
+        /** @type {{recordSync:global.KLF_RecordSync,adminUser:GlideRecord,testUtils:global.KLF_TestUtils}} */
+        var testFixtures;
+        beforeAll(function() {
+            testFixtures = init();
+        });
+
+        afterAll(function() {
+            testFixtures.testUtils.cleanup();
+        });
+
+        it('should unload a record with related records', function() {
+            var recordSync = testFixtures.recordSync;
+
+            var gr = new GlideRecord(testTableName);
+            gr.newRecord();
+            gr.short_description = 'Test description';
+            gr.my_currency.setDisplayValue('USD;100.00');
+            gr.my_price.setDisplayValue('USD;200.00');
+            gr.my_journal = 'Test journal';
+            gr.update();
+
+            var result = recordSync.unloadRecordWithRelatedRecords(gr);
+
+            var manifestObj = result.manifest.toObj();
+            gs.info(JSON.stringify(manifestObj, null, 4));
+            var tables = Object.keys(manifestObj);
+            expect(tables).toContain('fx_currency_instance', 'Should have currency instance');
+            expect(tables).toContain('fx_price', 'Should have price');
+            expect(tables).toContain('sys_journal_field', 'Should have journal field');
+            expect(tables).toContain(testTableName, 'Should have test table');
+
+
+            var xmlDocument2 = new XMLDocument2();
+            xmlDocument2.parseXML(recordSync.documentToString(result.document));
+            expect(xmlDocument2.getFirstNode('//fx_currency_instance')).not.toBeNull('Should have currency instance');
+            expect(xmlDocument2.getFirstNode('//fx_price')).not.toBeNull('Should have price');
+            expect(xmlDocument2.getFirstNode('//sys_journal_field')).not.toBeNull('Should have journal field');
+            expect(xmlDocument2.getFirstNode('//' + testTableName)).not.toBeNull('Should have test table');
+        });
+    });
+
+    describe('sendToRemoteInstance()', function() {
+        /** @type {{recordSync:global.KLF_RecordSync,adminUser:GlideRecord,testUtils:global.KLF_TestUtils}} */
+        var testFixtures;
+        beforeAll(function() {
+            testFixtures = init();
+        });
+
+        afterAll(function() {
+            testFixtures.testUtils.cleanup();
+        });
+
+        /** @type {global.KLF_TestUtils} */
+        var testUtils;
+        beforeEach(function() {
+            testUtils = new global.KLF_TestUtils();
+        });
+
+        afterEach(function() {
+            testUtils.cleanup();
+        });
+
+        it('should send a record to a remote instance', function() {
+            var recordSync = testFixtures.recordSync;
+
+            // Intentionally not inserting task here
+            // The call to sendToRemoteInstance should insert the record
+            var task = new GlideRecord('task');
+            task.newRecord();
+            task.short_description = 'Test task';
+
+            var taskDocument = recordSync.unloadRecord(task);
+            var taskXml = recordSync.documentToString(taskDocument);
+
+            var response = recordSync.sendToRemoteInstance(taskXml);
+            expect(response.success).toBeTruthy('Should have sent record');
+
+            var remoteTask = new GlideRecord('task');
+            expect(remoteTask.get(task.getUniqueValue())).toBeTrue('Should have record');
+        });
+
+        it('should return a missing manifest representing records that were not inserted if a manifest is provided', function() {
+            var recordSync = testFixtures.recordSync;
+
+            // Intentionally not inserting task here
+            // The call to sendToRemoteInstance should insert the record
+
+            var groupName = testUtils.getRandomGroupName();
+            var group1 = testUtils.createGroup(groupName);
+
+            // This is a duplicate group with same name, but different sys_id
+            // This will throw an error when trying to insert the duplicate group
+            var duplicateGroup1 = new GlideRecord('sys_user_group');
+            duplicateGroup1.newRecord();
+            duplicateGroup1.name = groupName;
+            testUtils.recordTracker.trackByGlideRecord(duplicateGroup1);
+
+            var manifest = new global.KLF_RecordSync.Manifest();
+            manifest.addRecordByGlideRecord(duplicateGroup1);
+
+            var groupDocument = recordSync.unloadRecord(duplicateGroup1);
+            var groupXml = recordSync.documentToString(groupDocument);
+
+            var response = recordSync.sendToRemoteInstance(groupXml, manifest);
+            expect(response.success).toBeTruthy('Should have sent record');
+
+            if (response.missingManifest) {
+                expect(response.missingManifest.getSysIdsForTable('sys_user_group')).toBeEqual([duplicateGroup1.getUniqueValue()], 'Should have missing record');
+            } else {
+                fail('Missing manifest should not be null');
+            }
+        });
+    });
+}
+
+/**
+ * @returns {KLF_RecordSyncConnectionConfig}
+ */
+KLF_RecordSyncTest.createLocalConnectionConfig = function() {
+    var localAdminUser = gs.getProperty('KLF_RecordSyncTest.localAdminUsername');
+    var localAdminPassword = gs.getProperty('KLF_RecordSyncTest.localAdminPassword');
+    return {
+        username: localAdminUser,
+        password: localAdminPassword, // Retrieve password from encoded password property
+        instanceUrl: gs.getProperty('glide.servlet.uri'),
+        chunkSize: 3
+    };
+};
+
+/**
+ * @returns {KLF_RecordSyncConnectionConfig}
+ */
+KLF_RecordSyncTest.createRemoteConnectionConfig = function() {
+    var remoteInstanceUrl = gs.getProperty('KLF_RecordSyncTest.remoteInstanceUrl');
+    var remoteAdminUser = gs.getProperty('KLF_RecordSyncTest.remoteAdminUsername');
+    var remoteAdminPassword = gs.getProperty('KLF_RecordSyncTest.remoteAdminPassword');
+    return {
+        username: remoteAdminUser,
+        password: remoteAdminPassword, // Retrieve password from encoded password property
+        instanceUrl: remoteInstanceUrl,
+        chunkSize: 3
+    };
+};
+
+/**
+ * @param {string} adminUsername
+ * @param {string} password
+ * @returns {KLF_RecordSyncConnectionConfig}
+ */
+KLF_RecordSyncTest.createConnectionConfig = function createConnectionConfig(adminUsername, password) {
+    return {
+        username: adminUsername,
+        password: password,
+        instanceUrl: gs.getProperty('glide.servlet.uri'),
+        chunkSize: 3
+    };
+};
+
+/**
+ * Clears the test data on the remote instance
+ * @returns {sn_ws.RESTResponseV2}
+ */
+KLF_RecordSyncTest.clearRemoteTestData = function() {
+    var remoteAdminUser = gs.getProperty('KLF_RecordSyncTest.remoteAdminUsername');
+    var remoteAdminPassword = gs.getProperty('KLF_RecordSyncTest.remoteAdminPassword');
+    var remoteInstanceUrl = gs.getProperty('KLF_RecordSyncTest.remoteInstanceUrl');
+
+    var request = new sn_ws.RESTMessageV2();
+    request.setRequestHeader("Accept", "application/json");
+    var authHeader = 'Basic ' + GlideStringUtil.base64Encode(remoteAdminUser + ':' + remoteAdminPassword);
+    // Do not use setBasicAuth. This does not work with mutual auth for some reason
+    // request.setBasicAuth(this.connectionConfig.username, this.connectionConfig.password);
+    request.setRequestHeader('Authorization', authHeader);
+    request.setEndpoint(remoteInstanceUrl + gs.getProperty('KLF_RecordSyncTest.endpoint.clean'));
+    request.setHttpMethod('DELETE');
+    return request.execute();
+};

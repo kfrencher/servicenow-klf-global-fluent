@@ -1,0 +1,502 @@
+/**
+ * When transferring an application between ServiceNow instances the various users and
+ * groups on the target system will not have the same roles as the source system. This
+ * script include helps to manage the transition of roles between the two systems.
+ * 
+ * The script include provides methods to:
+ * - getRolesInScope: Returns a list of roles in the provided scope
+ * - diffLocalAndRemoteRoles: Compares the roles assigned to users and groups on the source and target instances
+ * - getRemoteRoleAssignedTo: Returns the roles on the source instance that are not assigned to the user or group on the target instance
+ * - getAssignedToRole: Generates a data object that contains two keys: users and groups
+ * - getRoleAssignedTo: Generates a data object that contains role names as keys
+ * - getUsersForRole: Returns a list of usernames that have the specified role
+ * - getGroupsForRole: Returns a list of group names that have the specified role
+ * @example
+ * // This finds the roles in the x_53417_demo scope
+ * // Check the differences between the roles on the source and target instances
+ * // Then syncs the roles on the target instance so they are the same as the source instance
+ * // for the roles that are missing
+ * var connectionConfig = {
+ *     username: 'kenneth.frencher',
+ *     password: gs.getProperty('KLF_RecordSync.user.password'), // Retrieve password from encoded password property
+ *     instanceUrl: 'https://abspscpov2.service-now.com',
+ *     chunkSize: 20
+ * };
+ * var roleUtils = new global.KLF_RecordSync_RoleUtils(connectionConfig);
+ * var missingRoles = roleUtils.diffLocalAndRemoteRoles(roleNames);
+ * roleUtils.syncRoles(missingRoles);
+ */
+
+var global = global || {};
+
+/**
+ * @param {KLF_RecordSyncConnectionConfig} connectionConfig 
+ */
+global.KLF_RecordSync_RoleUtils = function(connectionConfig) {
+    this.connectionConfig = connectionConfig;
+};
+
+/**
+ * @typedef {{
+ * roleAssignedToData?: RoleAssignedToData,
+ * success: boolean
+ * error?: string
+ * }} RoleAssignedToResponse
+ */
+/**
+ * @param {string[]} roleNames 
+ * @returns 
+ */
+global.KLF_RecordSync_RoleUtils.getRemoteRoleAssignedTo = function(roleNames) {
+    return {
+        // @ts-ignore
+        roleAssignedToData: new global.KLF_RecordSync_RoleUtils().getRoleAssignedTo(roleNames),
+        success: true
+    };
+};
+
+/**
+ * @typedef {{
+ * success: boolean
+ * errors: string[]
+ * }} AddRolesResponse
+ */
+/**
+ * @param {RoleAssignedToData} roleData 
+ * @returns {AddRolesResponse}
+ */
+global.KLF_RecordSync_RoleUtils.addRoles = function(roleData) {
+    // @ts-ignore
+    var errors = new global.KLF_RecordSync_RoleUtils().addRoles(roleData);
+    return {
+        success: true,
+        errors: errors
+    };
+};
+
+global.KLF_RecordSync_RoleUtils.prototype = {
+    /**
+     * @param {string} message 
+     */
+    logInfo: function(message) {
+        gs.log(message, 'KLF_RecordSync_RoleUtils');
+    },
+    /**
+     * @param {string} message 
+     */
+    logError: function(message) {
+        gs.logError(message, 'KLF_RecordSync_RoleUtils');
+    },
+    /**
+     * Returns a list of roles in the provided scope
+     * @param {string} scope
+     * @returns {string[]}
+     */
+    getRolesInScope: function(scope) {
+        if (!scope) {
+            throw new Error('Scope is required');
+        }
+        var roles = [];
+        var role = new GlideRecord('sys_user_role');
+        role.addQuery('sys_scope.scope', scope);
+        role.query();
+        while (role.next()) {
+            roles.push(role.name.toString());
+        }
+        return roles;
+    },
+
+    /**
+     * Compares the two role objects and returns the roles that are present in
+     * role1 but not in role2. The role names in the two objects must match.
+     * @param {RoleAssignedToData} role1
+     * @param {RoleAssignedToData} role2
+     * @returns {RoleAssignedToData}
+     */
+    diffRoles: function(role1, role2) {
+        var roles1 = Object.keys(role1);
+        var roles2 = Object.keys(role2);
+
+        var missingRoles = new global.ArrayUtil().diff(roles1, roles2);
+        if (missingRoles.length > 0) {
+            throw new Error('Role names do not match: ' + missingRoles.join('\n'));
+        }
+
+        return roles1.reduce(function(diff, roleName) {
+            var users1 = role1[roleName].users;
+            var users2 = role2[roleName].users;
+            var missingUsers = new global.ArrayUtil().diff(users1, users2);
+
+            var groups1 = role1[roleName].groups;
+            var groups2 = role2[roleName].groups;
+            var missingGroups = new global.ArrayUtil().diff(groups1, groups2);
+
+            diff[roleName] = {
+                users: missingUsers,
+                groups: missingGroups
+            };
+            return diff;
+        }, /** @type {RoleAssignedToData} */ ({}));
+    },
+
+    /**
+     * Synchronizes the passed roles with the target instance
+     * @param {RoleAssignedToData} roleData
+     */
+    syncRoles: function(roleData) {
+        // Make a  request to sys_user_group
+        var request = this.createRestMessage();
+        request.setRequestHeader('Content-Type', 'application/json');
+        request.setHttpMethod('POST');
+        var endpoint = request.getEndpoint() + gs.getProperty('KLF_RecordSync_RoleUtils.endpoint.roles.path');
+        request.setEndpoint(endpoint);
+        this.logInfo('Syncing remote roles:\n\n' + JSON.stringify(roleData, null, 4));
+        request.setRequestBody(JSON.stringify(roleData));
+
+        var response = request.execute();
+        if (response.getStatusCode() != 200) {
+            this.logError('Failed to sync roles using role data: ' + JSON.stringify(roleData));
+            this.logError('Received status code: ' + response.getStatusCode());
+            this.logError('Received body: ' + response.getBody());
+            return {
+                success: false,
+                error: response.getBody()
+            };
+        }
+
+        var responseBody = JSON.parse(response.getBody());
+        return {
+            success: true,
+            errors: responseBody.result.errors
+        };
+    },
+
+    /**
+     * Adds the specified roles to the users / groups
+     * @param {RoleAssignedToData} roleData
+     * @returns {string[]} Array of any errors that occurred
+     */
+    addRoles: function(roleData) {
+        var me = this;
+        var roleNames = Object.keys(roleData);
+        var errors = /** @type {string[]} */ ([]);
+        roleNames.forEach(function(roleName) {
+            var assignedTo = roleData[roleName];
+            assignedTo.users.forEach(function(username) {
+                try {
+                    me._addUserRole(username, roleName);
+                } catch (e) {
+                    if (e instanceof Error && e.name == 'UserNotFoundError') {
+                        errors.push(e.message);
+                    }
+                    if (e instanceof Error && e.name == 'RoleNotFoundError') {
+                        errors.push(e.message);
+                    }
+                }
+            });
+            assignedTo.groups.forEach(function(groupName) {
+                try {
+                    me._addGroupRole(groupName, roleName);
+                } catch (e) {
+                    if (e instanceof Error && e.name == 'GroupNotFoundError') {
+                        errors.push(e.message);
+                    }
+                    if (e instanceof Error && e.name == 'RoleNotFoundError') {
+                        errors.push(e.message);
+                    }
+                }
+            });
+        });
+
+        return errors;
+    },
+
+    /**
+     * Compares the roles assigned to users and groups on the source and target instances.
+     * Returns the roles on the source instance that are not assigned to the user or group
+     * on the target instance.
+     * 
+     * This allows for the roles to be added to the user or group on the target instance.
+     * @param {string[]} roleNames
+     * @returns {RoleAssignedToData}
+     */
+    diffLocalAndRemoteRoles: function(roleNames) {
+        var localRoles = this.getRoleAssignedTo(roleNames);
+        var response = this.getRemoteRoleAssignedTo(roleNames);
+        if (!response.success) {
+            throw new Error('Failed to retrieve remote roles: ' + response.error);
+        }
+
+        var remoteRoles = /** @type {RoleAssignedToData} */ (response.roleAssignedToData);
+        return this.diffRoles(localRoles, remoteRoles);
+    },
+
+    /**
+     * Returns a sn_ws.RESTMessageV2 object that is configured to make a request to the target instance
+     * @returns {sn_ws.RESTMessageV2}
+     */
+    createRestMessage: function() {
+        var request = new sn_ws.RESTMessageV2();
+        request.setRequestHeader("Accept", "application/json");
+        var authHeader = 'Basic ' + GlideStringUtil.base64Encode(this.connectionConfig.username + ':' + this.connectionConfig.password);
+        request.setRequestHeader('Authorization', authHeader);
+        // Do not use setBasicAuth. This does not work with mutual auth for some reason
+        // request.setBasicAuth(this.connectionConfig.username, this.connectionConfig.password);
+        request.setEndpoint(this.connectionConfig.instanceUrl);
+        return request;
+    },
+
+    /**
+     * @param {string[]} roleNames
+     * @returns {RoleAssignedToResponse}
+     */
+    getRemoteRoleAssignedTo: function(roleNames) {
+        // Make a  request to sys_user_group
+        var request = this.createRestMessage();
+        request.setRequestHeader('Content-Type', 'application/json');
+        request.setHttpMethod('GET');
+        var endpoint = request.getEndpoint() +
+            gs.getProperty('KLF_RecordSync_RoleUtils.endpoint.roles.path') +
+            '?roleNames=' + roleNames.join(',');
+        request.setEndpoint(endpoint);
+        this.logInfo('Retrieving remote roles using endpoint: ' + endpoint);
+        this.logInfo('Retrieving remote roles:\n\n' + JSON.stringify(roleNames, null, 4));
+
+        var response = request.execute();
+        if (response.getStatusCode() != 200) {
+            this.logError('Failed to retrieve roles using role names: ' + roleNames.join(', '));
+            this.logError('Received status code: ' + response.getStatusCode());
+            this.logError('Received body: ' + response.getBody());
+            return {
+                success: false,
+                error: response.getBody()
+            };
+        }
+
+        this.logInfo('Response from getRemoteRoleAssignedTo: ' + response.getBody());
+        var responseBody = JSON.parse(response.getBody());
+        return {
+            success: true,
+            roleAssignedToData: responseBody.result.roleAssignedToData
+        };
+    },
+
+    /**
+     * @typedef {{
+     * users: {
+     *   [username:string]: string[] // role names
+     * },
+     * groups: {
+     *   [groupName:string]: string[] // role names
+     * }
+     * }} AssignedToRoleData
+     */
+    /**
+     * Generates a data object that contains two keys: users and groups. The users key
+     * contains a map of usernames to role names. The groups key contains a map of group
+     * names to role names.
+     * 
+     * The roles in each map are the uninherited roles associated with the user or group on the source
+     * instance
+     * 
+     * @param {string[]} roleNames
+     * @returns {AssignedToRoleData}
+     * @example
+     * var roleUtils = new global.KLF_RecordSync_RoleUtils();
+     * roleUtils.getRoleAssignedTo(['x_53417_demo.user']);
+     * // returns:
+     * {
+     *   "users": {
+     *       "avery.parbol": [
+     *           "x_53417_demo.user"
+     *       ],
+     *       "alyssa.biasotti": [
+     *           "x_53417_demo.user"
+     *       ],
+     *   },
+     *   "groups": {
+     *       "ATF_TestGroup_ServiceDesk": [
+     *           "x_53417_demo.user"
+     *       ],
+     *       "Network CAB Managers": [
+     *           "x_53417_demo.user"
+     *       ],
+     *   }
+     * }
+     */
+    getAssignedToRole: function(roleNames) {
+        var me = this;
+        return roleNames.reduce(function(roleData, roleName) {
+            var users = me.getUsersForRole(roleName);
+            var groups = me.getGroupsForRole(roleName);
+
+            roleData.users = users.reduce(function(userMap, userName) {
+                userMap[userName] = userMap[userName] || [];
+                userMap[userName].push(roleName);
+                return userMap;
+            }, roleData.users || {});
+
+            roleData.groups = groups.reduce(function(groupMap, groupName) {
+                groupMap[groupName] = groupMap[groupName] || [];
+                groupMap[groupName].push(roleName);
+                return groupMap;
+            }, roleData.groups || {});
+
+            return roleData;
+        }, /** @type {AssignedToRoleData} */ ({}));
+    },
+
+    /**
+     * @typedef {{
+     * [roleName:string]: {
+     *  users: string[],
+     *  groups: string[]
+     * }
+     * }} RoleAssignedToData
+     */
+    /**
+     * Generates a data object that contains role names as keys. Each key contains
+     * an object with two keys: users and groups. The users key contains a list of
+     * usernames that have the role on the source instance. The groups key contains
+     * a list of group names that have the role on the source instance.
+     * 
+     * @param {string[]} roleNames
+     * @returns {RoleAssignedToData}
+     * @example
+     * var roleUtils = new global.KLF_RecordSync_RoleUtils();
+     * roleUtils.getRoleAssignedTo(['x_53417_demo.user']);
+     * // returns:
+     * {
+     *   "x_53417_demo.user": {
+     *       "users": [
+     *           "avery.parbol",
+     *           "alyssa.biasotti"
+     *       ],
+     *       "groups": [
+     *           "ATF_TestGroup_ServiceDesk",
+     *           "Network CAB Managers"
+     *       ]
+     *   }
+     * }
+     */
+    getRoleAssignedTo: function(roleNames) {
+        var me = this;
+        return roleNames.reduce(function(roleData, roleName) {
+            roleData[roleName] = {
+                users: me.getUsersForRole(roleName),
+                groups: me.getGroupsForRole(roleName)
+            };
+            return roleData;
+        }, /** @type {RoleAssignedToData} */ ({}));
+    },
+
+
+    /**
+     * Returns a list of usernames that have the specified role
+     * @param {string} roleName 
+     * @returns {string[]}
+     */
+    getUsersForRole: function(roleName) {
+        if (!roleName) {
+            throw new Error('Role name is required');
+        }
+        var userNames = [];
+        var userRole = new GlideRecord('sys_user_has_role');
+        userRole.addQuery('role.name', roleName);
+        userRole.addQuery('inherited', false);
+        userRole.query();
+        while (userRole.next()) {
+            userNames.push(userRole.user.user_name.toString());
+        }
+        return userNames;
+    },
+
+    /**
+     * Returns a list of group names that have the specified role
+     * @param {string} roleName 
+     * @returns {string[]}
+     */
+    getGroupsForRole: function(roleName) {
+        if (!roleName) {
+            throw new Error('Role name is required');
+        }
+        var groupNames = [];
+        var groupRole = new GlideRecord('sys_group_has_role');
+        groupRole.addQuery('role.name', roleName);
+        groupRole.query();
+        while (groupRole.next()) {
+            groupNames.push(groupRole.group.name.toString());
+        }
+        return groupNames;
+    },
+
+    /**
+     * Adds the specified role to the group. If the role is already assigned to the group
+     * then no action is taken.
+     * @param {string} groupName 
+     * @param {string} roleName 
+     * @throws {Error} If the user or role does not exist
+     */
+    _addGroupRole: function(groupName, roleName) {
+        var groupRole = new GlideRecord('sys_group_has_role');
+        var error = null;
+        // Make sure user and role exist
+        var group = new GlideRecord('sys_user_group');
+        if (!group.get('name', groupName)) {
+            error = new Error('Group not found: ' + groupName);
+            error.name = 'GroupNotFoundError';
+            throw error;
+        }
+        var role = new GlideRecord('sys_user_role');
+        if (!role.get('name', roleName)) {
+            error = new Error('Role not found: ' + roleName);
+            error.name = 'RoleNotFoundError';
+            throw error;
+        }
+        groupRole.addQuery('group.name', groupName);
+        groupRole.addQuery('role.name', roleName);
+        groupRole.query();
+        if (!groupRole.next()) {
+            groupRole.newRecord();
+            groupRole.group = group.getUniqueValue();
+            groupRole.role = role.getUniqueValue();
+            groupRole.update();
+        }
+    },
+
+
+    /**
+     * Adds the specified role to the user. If the role is already assigned to the user
+     * then no action is taken.
+     * @param {string} username 
+     * @param {string} roleName 
+     * @throws {Error} If the user or role does not exist
+     */
+    _addUserRole: function(username, roleName) {
+        var userRole = new GlideRecord('sys_user_has_role');
+        var error = null;
+        // Make sure user and role exist
+        var user = new GlideRecord('sys_user');
+        if (!user.get('user_name', username)) {
+            error = new Error('User not found: ' + username);
+            error.name = 'UserNotFoundError';
+            throw error;
+        }
+        var role = new GlideRecord('sys_user_role');
+        if (!role.get('name', roleName)) {
+            error = new Error('Role not found: ' + roleName);
+            error.name = 'RoleNotFoundError';
+            throw error;
+        }
+        userRole.addQuery('user.user_name', username);
+        userRole.addQuery('role.name', roleName);
+        userRole.query();
+        if (!userRole.next()) {
+            userRole.newRecord();
+            userRole.user = user.getUniqueValue();
+            userRole.role = role.getUniqueValue();
+            userRole.update();
+        }
+    }
+
+};

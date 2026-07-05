@@ -1,0 +1,331 @@
+/**
+ * This script is a utility class for migrating records between different scopes in ServiceNow.
+ * It extends the KLF_RecordSync class and provides additional functionality for transforming data.
+ * 
+ * KLF_RecordSync will transfer data from one instance to another. This object allows the data to
+ * be transformed before it is sent to the target instance. This is useful when you need to change the
+ * target table or other data before it is sent to the target instance.
+ */
+
+/**
+ * @typedef {global.KLF_RecordSync & KLF_MigratorUtils} KLF_MigratorUtils_Class
+ */
+
+/**
+ * @typedef {Object} KLF_MigratorUtilsConfig
+ * @property {string} sourceScope - The scope of the source records.
+ * @property {string} [sourceScopeSysId] - The sys_id of the source scope.
+ * @property {string} targetScope - The scope of the target records.
+ * @property {string} [targetScopeSysId] - The sys_id of the target scope.
+ * @property {{[sourceTableName: string]: string}} [tableMap] - A map of source table names to target table names.
+ * @property {{[sourceMetadataSysId: string]: string}} [metadataMap] - A map of source metadata sys_ids to target metadata sys_ids.
+ */
+
+/**
+ * @param {KLF_MigratorUtilsConfig} config 
+ * @param {KLF_RecordSyncConnectionConfig} connectionConfig
+ * @param {KLF_RecordSync_GroupMapping?} [groupMapping]
+ * @param {KLF_RecordSync_UserMapping?} [userMapping]
+ * @example
+ * var migrator = new global.KLF_MigratorUtils({
+ *     sourceScope: 'x_53417_scoper_1',
+ *     targetScope: 'x_53417_scoper_2',
+ *     tableMap: {
+ *         'x_53417_scoper_1_scoper_task': 'x_53417_scoper_2_scoper_task'
+ *     }
+ * });
+ */
+function KLF_MigratorUtils(config, connectionConfig, groupMapping, userMapping) {
+    // Call the parent constructor (KLF_RecordSync)
+    global.KLF_RecordSync.call(this, connectionConfig, groupMapping, userMapping, this.transformData.bind(this));
+
+    var _config = config || {};
+    var sourceScopeSysId = config.sourceScopeSysId || this.getScopeSysId(_config.sourceScope);
+    if (!sourceScopeSysId) {
+        throw 'Source scope not found';
+    }
+
+    var targetScopeSysId = config.targetScopeSysId || this.getScopeSysId(_config.targetScope);
+    if (!targetScopeSysId) {
+        throw 'Target scope not found';
+    }
+
+    this.sourceScope = _config.sourceScope;
+    this.sourceScopeSysId = sourceScopeSysId;
+    this.targetScope = _config.targetScope;
+    this.targetScopeSysId = targetScopeSysId;
+    this.tableMap = _config.tableMap || {};
+}
+
+// Inherit from KLF_RecordSync
+KLF_MigratorUtils.prototype = Object.create(global.KLF_RecordSync.prototype);
+
+// Set the constructor back to KLF_MigratorUtils
+KLF_MigratorUtils.prototype.constructor = KLF_MigratorUtils;
+
+/**
+ * @memberof MY_KLF_MigratorUtils
+ * Updates the scope found in the string using the source scope.
+ * @param {string} string 
+ * @returns {string}
+ */
+KLF_MigratorUtils.prototype.updateScope = function(string) {
+    var _string = string.replace(new RegExp(this.sourceScope, 'g'), this.targetScope);
+    return string.replace(new RegExp(this.sourceScopeSysId, 'g'), this.targetScopeSysId);
+};
+
+/**
+ * Updates the table names found in the string using the table map.
+ * 
+ * @param {string} string 
+ * @returns {string}
+ */
+KLF_MigratorUtils.prototype.updateTableNames = function(string) {
+    if (!string) {
+        return string;
+    }
+
+    // I want to replace these
+    // <u_klf_test_task action="INSERT_OR_UPDATE">
+    // </u_klf_test_task>
+    // <sys_class_name>u_klf_test_task</sys_class_name>
+
+    // Do not replace this
+    // <u_klf_test_task display_value="KLF0001078">e05571fd2b5d2a100060ff42fe91bfe5</u_klf_test_task>
+
+    for (var sourceTableName in this.tableMap) {
+        var targetTableName = this.tableMap[sourceTableName];
+        string = string.replace(new RegExp('<' + sourceTableName + ' action', 'g'), '<' + targetTableName + ' action');
+        string = string.replace(new RegExp('></' + sourceTableName + '>', 'g'), '></' + targetTableName + '>');
+        string = string.replace(new RegExp('<sys_class_name>' + sourceTableName + '<', 'g'), '<sys_class_name>' + targetTableName + '<');
+    }
+    return string;
+};
+
+/**
+ * Retrieves the sys_id of a scope by its name.
+ * @param {string} scopeName - The name of the scope to look up.
+ * @returns {string|null} The sys_id of the scope if found, null otherwise.
+ */
+KLF_MigratorUtils.prototype.getScopeSysId = function(scopeName) {
+    var scopeGr = new GlideRecord('sys_scope');
+    if (scopeGr.get('scope', scopeName)) {
+        return scopeGr.getUniqueValue();
+    }
+    // Could be global scope. Need to check by name
+    var globalScope = new GlideRecord('sys_scope');
+    globalScope.addQuery('name', scopeName);
+    globalScope.query();
+    if (globalScope.getRowCount() === 1) {
+        globalScope.next();
+        return globalScope.getUniqueValue();
+    } else if (globalScope.getRowCount() > 1) {
+        throw 'Ambiguous scope name. More than one scope found with the name: ' + scopeName;
+    }
+
+    return null;
+};
+
+/**
+ * @param {global.KLF_RecordSync.Manifest} manifest
+ */
+KLF_MigratorUtils.prototype.updateManifest = function(manifest) {
+    var me = this;
+    var targetManifest = new global.KLF_RecordSync.Manifest();
+
+    // The manifest will have the source table names
+    // I need to replace the source table names with the target table names
+
+    manifest.getTables().forEach(function(sourceTableName) {
+        var targetTableName = me.tableMap[sourceTableName] || sourceTableName;
+        targetManifest.addRecords(targetTableName, manifest.getSysIdsForTable(sourceTableName));
+    });
+
+    return targetManifest;
+};
+
+/**
+ * @param {string} xml
+ * @param {global.KLF_RecordSync.Manifest} [manifest]
+ * @returns {{xml: string, manifest?: global.KLF_RecordSync.Manifest}}
+ */
+KLF_MigratorUtils.prototype.transformData = function(xml, manifest) {
+    gs.log('Before transform XML: ' + xml.substring(0,100), 'KLF_MigratorUtils');
+    var _xml = this.updateScope(xml);
+    _xml = this.updateTableNames(_xml);
+    gs.log('After transform XML: ' + _xml.substring(0,100), 'KLF_MigratorUtils');
+    var _manifest = manifest ? this.updateManifest(manifest) : undefined;
+
+    // This function is called when the record is sent to the target instance
+    // You can use this function to log the XML or do any other processing you need to do
+    return {
+        xml: _xml,
+        manifest: _manifest
+    };
+};
+
+/**
+ * @override
+ * @param {string} message 
+ */
+KLF_MigratorUtils.prototype.logError = function(message) {
+    gs.logError(message, 'KLF_MigratorUtils');
+};
+
+/**
+ * @override
+ * @param {string} message 
+ */
+KLF_MigratorUtils.prototype.logInfo = function(message) {
+    gs.log(message, 'KLF_MigratorUtils');
+};
+
+/**
+ * @override
+ * Overrides the {@link global.KLF_RecordSync.getSysIdsToInsert} function. In the migrator, the
+ * source and destination tables are different, so this function must account for the differences in table names.
+ * 
+ * This is used to filter out the sys_ids that are already in the target instance.
+ * It's primarily used to prevent sending unnecessary data to the target instance.
+ * Refer to {@link global.KLF_RecordSync.syncTable} for an example of how this is used.
+ * @param {string[]} sourceSysIds 
+ * @param {string} sourceTableName 
+ * @returns {string[]?}
+ */
+KLF_MigratorUtils.prototype.getSysIdsToInsert = function(sourceSysIds, sourceTableName) {
+    // I'm just declaring this here so the TypeScript compiler doesn't complain about references to
+    // functions in the parent class. I will reference all the functions in the parent class using this.
+    var superThis = /** @type {global.KLF_RecordSync} **/ ( /** @type {unknown} **/ (this));
+
+    // If there is a mapping for this table then use the mapping. If not then the
+    // source table name should be the target table name.
+    var targetTableName = this.tableMap[sourceTableName] || sourceTableName;
+
+    // Query the remote instance using the REST table API for the records that are in the sysIds array
+    var request = superThis.createRestMessage();
+    request.setHttpMethod('GET');
+    var endpointPath = '/api/now/table/' + targetTableName;
+    var query = [
+        'sysparm_fields=sys_id',
+        'sysparm_query=sys_idIN' + encodeURIComponent(sourceSysIds.join(','))
+    ].join('&');
+    var endpoint = request.getEndpoint() + endpointPath + '?' + query;
+    request.setEndpoint(endpoint);
+    var response = request.execute();
+
+    if (response.getStatusCode() != 200) {
+        superThis.logError('Failed to get the records from the target instance');
+        superThis.logError('Received status code: ' + response.getStatusCode());
+        superThis.logError('Received body: ' + response.getBody());
+        return null;
+    }
+
+    /** @type {{result:[{sys_id:string}]}} */
+    var responseBody;
+    try {
+        responseBody = JSON.parse(response.getBody());
+    } catch (e) {
+        superThis.logError('Failed to parse the response from the target instance');
+        superThis.logError('Received status code: ' + response.getStatusCode());
+        superThis.logError('Received body: ' + response.getBody());
+        return null;
+    }
+
+    // The sys_ids in the response represent records that already exist in the target instance
+    // Subtract the sys_ids in the response from the sysIds array to get the sys_ids that do not exist in the target instance
+    // This will be the sys_ids that need to be inserted into the target instance
+    var targetSysIds = /** @type string[] */ ([]);
+    responseBody.result.forEach(function(record) {
+        targetSysIds.push(record.sys_id);
+    });
+
+    return sourceSysIds.filter(function(sysId) {
+        return targetSysIds.indexOf(sysId) === -1;
+    });
+};
+
+//@ts-ignore
+var global = global || {};
+global.KLF_MigratorUtils = KLF_MigratorUtils;
+
+
+
+// Example of how to use the KLF_MigratorUtils class to transfer data from one instance to another
+(function() {
+    var sourceScope = 'KLF Test Global'; // The scope to sync data from
+    var scopeSysId = '34746a042bd5a2100060ff42fe91bf28'; // 
+
+    var targetScope = 'x_53417_klf_test'; // The scope to sync data to
+    var targetScopeSysId = '5374f750835da2103c9299e0deaad367'; // 
+
+    /**
+     * When initializing the KLF_MigratorUtils object you must pass in a configuration object
+     * that contains connection information to the target instance.
+     */
+    function getConnectionConfig() {
+        var connectionConfig = {
+            instanceUrl: 'https://dev229555.service-now.com/',
+            username: 'admin',
+            password: gs.getProperty('KLF_RecordSync.password'),
+            chunkSize: 20
+        };
+        return connectionConfig;
+    }
+
+    /**
+     * Creates a user mapping for the target instance
+     * @returns {KLF_RecordSync_UserMapping}
+     */
+    function createUserMapping() {
+        var connectionConfig = getConnectionConfig();
+        var userUtils = new global.KLF_RecordSync_UserUtils(connectionConfig);
+        var users = userUtils.getUniqueUsersInScope(sourceScope);
+        return userUtils.createUserMapping(users, sourceScope);
+    }
+
+    /**
+     * Creates a group mapping for the target instance
+     * @returns {KLF_RecordSync_GroupMapping}
+     */
+    function createGroupMapping() {
+        var connectionConfig = getConnectionConfig();
+        var groupUtils = new global.KLF_RecordSync_GroupUtils(connectionConfig);
+        var groups = groupUtils.getUniqueGroupsInScope(sourceScope);
+        return groupUtils.createGroupMapping(groups, sourceScope);
+    }
+
+    function transferData() {
+        var connectionConfig = getConnectionConfig();
+        var userMapping = new global.KLF_RecordSync_UserUtils(connectionConfig).getUserMapping(sourceScope);
+        var groupMapping = new global.KLF_RecordSync_GroupUtils(connectionConfig).getGroupMapping(sourceScope);
+
+        /** @type {KLF_MigratorUtils_Class} */
+        // @ts-ignore
+        var migratorUtils = new global.KLF_MigratorUtils({
+                sourceScope: sourceScope,
+                sourceScopeSysId: scopeSysId,
+                targetScope: targetScope,
+                targetScopeSysId: targetScopeSysId,
+                // The table map is used to map the source table names to the target table names
+                tableMap: {
+                    'u_klf_test_task': 'x_53417_klf_test_test_task'
+                }
+            },
+            connectionConfig,
+            userMapping,
+            groupMapping
+        );
+
+        // Sync the table from the source instance to the target instance
+        migratorUtils.syncTable('u_klf_test_task');
+    }
+
+    // Creates the user mapping. This is necessary to map the users in the source instance to the users in the target instance
+    // createUserMapping();
+
+    // Creates the group mapping. This is necessary to map the groups in the source instance to the groups in the target instance
+    // createGroupMapping();
+
+    // Transfers the data from the source instance to the target instance
+    transferData();
+});

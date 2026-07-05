@@ -1,0 +1,557 @@
+// @ts-ignore
+function KLF_ScoperUtilsTest(outputs, steps, params, stepResult, assertEqual) {
+    // Need to clear out the cache before running the tests
+    gs.setProperty('KLF_ScoperUtils.processed_records', '{}');
+    gs.setProperty('KLF_ScoperUtils.metadata_map', '{}');
+
+    var SOURCE_SCOPE = global.KLF_TestUtils.getProperty('KLF_ScoperUtilsTest.source_scope');
+    var TARGET_SCOPE = global.KLF_TestUtils.getProperty('KLF_ScoperUtilsTest.target_scope');
+    var SCOPER_SAVE_UI_ACTION_SYS_ID = 'cfb0718d47a0961058ceeb02d16d438d';
+    var SOURCE_TABLE_NAME = SOURCE_SCOPE + '_scoper_task';
+    var SOURCE_ROLE_NAME = SOURCE_SCOPE + '.scoper';
+    var TARGET_TABLE_NAME = TARGET_SCOPE + '_scoper_task';
+    var TARGET_ROLE_NAME = TARGET_SCOPE + '.scoper';
+
+    /** @type {{ [sourceTableName: string]: string; }} */
+    var tableMap = {};
+    tableMap[SOURCE_TABLE_NAME] = TARGET_TABLE_NAME;
+
+    var targetScope = new GlideRecord('sys_scope');
+    var TARGET_SCOPE_SYS_ID = '';
+    if (targetScope.get('scope', TARGET_SCOPE)) {
+        TARGET_SCOPE_SYS_ID = targetScope.getUniqueValue();
+    } else {
+        throw new Error('Target Scope ' + TARGET_SCOPE + ' not found');
+    }
+
+    /**
+     * Get the test UI View
+     * @returns {GlideRecord}
+     */
+    function getTestUiView() {
+        var view = new GlideRecord('sys_ui_view');
+        if (!view.get('name', 'scoper')) {
+            fail('Source UI View not found');
+        }
+        return view;
+    }
+
+    describe('', function() {
+        /** @type {global.KLF_ScoperUtils} */
+        var scoper;
+
+        beforeEach(function() {
+            scoper = new global.KLF_ScoperUtils({
+                sourceScope: SOURCE_SCOPE,
+                targetScope: TARGET_SCOPE,
+                tableMap: tableMap
+            });
+        });
+
+        describe('checkTableMap()', function() {
+            it('should throw an error if the source table is not found', function() {
+                expect(function() {
+                    new global.KLF_ScoperUtils({
+                        sourceScope: SOURCE_SCOPE,
+                        targetScope: TARGET_SCOPE,
+                        tableMap: {
+                            'does_not_exist': 'task'
+                        }
+                    });
+                }).toThrowMatching(function(error) {
+                    return typeof error === 'string' && error.indexOf('not found') > -1;
+                });
+            });
+        });
+
+        describe('isProcessed()', function() {
+            it('should return false if the record has not been processed', function() {
+                expect(scoper.isProcessed(gs.generateGUID())).toBe(false, 'Record should not be processed');
+            });
+
+            it('should return true if the record has been processed', function() {
+                var sourceSysId = gs.generateGUID();
+                scoper.markRecordAsCopied(sourceSysId, gs.generateGUID());
+                expect(scoper.isProcessed(sourceSysId)).toBe(true, 'Record should be processed');
+            });
+        });
+
+        describe('copyMetadataBySysId() - Role', function() {
+            it('should copy a Role from one scope to another', function() {
+                var source = new GlideRecord('sys_user_role');
+                if (!source.get('name', SOURCE_ROLE_NAME)) {
+                    fail('Source Role not found');
+                }
+
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                var target = new GlideRecord('sys_user_role');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe(TARGET_ROLE_NAME, 'Role name should be correct');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be correct');
+                } else {
+                    fail('Target Role not found');
+                }
+            });
+        });
+
+        describe('copyMetadataBySysId() - UI Action', function() {
+            it('should copy a UI Action from one scope to another', function() {
+                // First test to see if the source UI Action copies to the target scope
+                var source = new GlideRecord('sys_ui_action');
+                var sourceSysId = SCOPER_SAVE_UI_ACTION_SYS_ID; // Scoper Save
+                if (!source.get(sourceSysId)) {
+                    fail('Source UI Action not found');
+                }
+
+                var targetMetadata = scoper.copyMetadataBySysId(sourceSysId);
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                var target = new GlideRecord('sys_ui_action');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                    expect(target.getValue('action_name')).toBe('scoper_save', 'Action name should be correct');
+                    expect(target.getValue('table')).not.toBeFalsy(), 'Table should not be empty';
+                    expect(target.getValue('table')).not.toContain(SOURCE_SCOPE, 'Table should not contain source scope');
+                    expect(target.getValue('script')).not.toBeFalsy(), 'Script should not be empty';
+                    expect(target.getValue('script')).not.toContain(SOURCE_SCOPE, 'Script should not contain source scope');
+                } else {
+                    fail('Target UI Action not found');
+                }
+            });
+        });
+
+        describe('copyMetadataBySysId() - UI Action Visibility', function() {
+            it('should copy a UI Action Visibility from one scope to another', function() {
+                // Need to seed the metadataMap with the new sysId for the Scoper Save UI Action
+                // When the UI Action Visibility is copied, the sys_ui_action field will need to be
+                // mapped to the new sysId for the Scoper Save UI Action
+                scoper.metadataMap = {};
+                scoper.metadataMap[SCOPER_SAVE_UI_ACTION_SYS_ID] = gs.generateGUID();
+
+                var source = new GlideRecord('sys_ui_action_view'); // UI Action Visibility for Scoper Save
+                source.addQuery('sys_ui_view.name', 'sp'); // Service Portal
+                source.addQuery('sys_ui_action', SCOPER_SAVE_UI_ACTION_SYS_ID); // Scoper Save
+                source.query();
+                if (!source.next()) {
+                    fail('Source UI Action Visibility not found');
+                }
+
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                // Check if the UI Action Visibility records were copied
+                var target = new GlideRecord('sys_ui_action_view');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.sys_ui_view.name.toString()).toBe('sp', 'View name should be Service Portal');
+                    expect(target.getValue('sys_ui_action')).toBe(scoper.metadataMap[SCOPER_SAVE_UI_ACTION_SYS_ID], 'UI Action should be Scoper Save');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                } else {
+                    fail('Target UI Action Visibility not found');
+                }
+            });
+        });
+
+        describe('copyMetadataBySysId() - Script Include', function() {
+            it('should copy a script include from one scope to another', function() {
+                var source = new GlideRecord('sys_script_include');
+                if (!source.get('api_name', SOURCE_SCOPE + '.ScopeHelper')) {
+                    fail('Source Script Include not found');
+                }
+
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                var target = new GlideRecord('sys_script_include');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    var targetApiName = TARGET_SCOPE + '.ScopeHelper';
+                    expect(target.getValue('api_name')).toBe(targetApiName, 'API Name should be correct');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                    expect(target.getValue('script')).not.toContain(SOURCE_SCOPE, 'Script should not contain source scope');
+                    expect(target.getValue('script')).not.toBeFalsy(), 'Script should not be empty';
+                } else {
+                    fail('Target Script Include not found');
+                }
+            });
+        });
+
+        describe('copyMetadataBySysId() - Business Rule', function() {
+            it('should copy a business rule from one scope to another', function() {
+                var source = new GlideRecord('sys_script');
+                source.addQuery('name', 'klf_br_scoper');
+                source.addQuery('sys_scope.scope', SOURCE_SCOPE);
+                source.query();
+                if (!source.next()) {
+                    fail('Source Business Rule not found');
+                }
+
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                var target = new GlideRecord('sys_script');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe('klf_br_scoper', 'Name should be correct');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be correct');
+                    expect(target.getValue('filter_condition')).toBe(source.getValue('filter_condition'), 'Filter condition should be correct');
+                    // Check if the table name is updated
+                    // @ts-ignore
+                    expect(target.getValue('collection')).toBe(tableMap[SOURCE_TABLE_NAME], 'Table name should be correct');
+                    // All references to the source scope should be updated to the target scope
+                    expect(target.getValue('script')).not.toContain(SOURCE_SCOPE, 'Script should be correct');
+                } else {
+                    fail('Target Business Rule not found');
+                }
+            });
+        });
+
+        describe('copyMetadataBySysId() - Column', function() {
+            it('should copy a column from one table to another', function() {
+                var columnName = 'description';
+                var columnType = 'string';
+
+                // Column is SOURCE_TABLE_NAME.description
+                var source = new GlideRecord('sys_dictionary');
+                source.addQuery('name', SOURCE_TABLE_NAME);
+                source.addQuery('element', columnName);
+                source.query();
+                if (!source.next()) {
+                    fail('Source Column not found');
+                }
+
+                // Copy the column
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                // Check if the column exists in the target table
+                var target = new GlideRecord('sys_dictionary');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe(TARGET_TABLE_NAME, 'Table name should be correct');
+                    expect(target.getValue('element')).toBe(columnName, 'Column name should be correct');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                    expect(target.getValue('column_label')).toBe('Description', 'Column label should be Description');
+                    expect(target.getValue('internal_type')).toBe(columnType, 'Column type should be correct');
+                } else {
+                    fail('Target Column not found');
+                }
+            });
+        });
+
+        describe('copyMetadataBySysId() - UI View', function() {
+            it('should only attempt to copy a UI View if it is in the source scope', function() {
+                var defaultViewName = '';
+                var defaultView = new GlideRecord('sys_ui_view');
+                if (!defaultView.get('name', '')) {
+                    fail('Default View not found');
+                }
+
+                expect(function() {
+                    scoper.copyMetadataBySysId(defaultView.getUniqueValue());
+                }).toThrowMatching(function(error) {
+                    return typeof error === 'string' && error.indexOf('source scope') > -1;
+                });
+            });
+
+            it('should copy a UI View from one scope to another', function() {
+                var source = getTestUiView();
+
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+
+                var target = new GlideRecord('sys_ui_view');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe('scoper', 'Name should be scoper');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                } else {
+                    fail('Target UI View not found');
+                }
+            });
+        });
+
+        describe('copyMetadataBySysId() - UI List', function() {
+            it('should copy a UI List and the related List Elements from one scope to another', function() {
+                // Get the source UI List
+                var testView = getTestUiView();
+                var source = new GlideRecord('sys_ui_list');
+                source.addQuery('view', testView.getUniqueValue());
+                source.addQuery('name', SOURCE_TABLE_NAME);
+                source.addQuery('sys_scope.scope', SOURCE_SCOPE);
+                source.query();
+                if (!source.next()) {
+                    fail('Source UI List not found');
+                }
+
+                // Get the related List Elements ordered ascending by position
+                var sourceListElementGr = new GlideRecord('sys_ui_list_element');
+                sourceListElementGr.orderBy('position');
+                sourceListElementGr.addQuery('list_id', source.getUniqueValue());
+                sourceListElementGr.query();
+                if (!sourceListElementGr.hasNext()) {
+                    fail('Source UI List Elements not found');
+                }
+                var sourceElements = [];
+                while (sourceListElementGr.next()) {
+                    sourceElements.push({
+                        element: sourceListElementGr.getValue('element'),
+                        position: sourceListElementGr.getValue('position')
+                    });
+                }
+
+                // Copy the UI List
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                // Check if the UI List was copied
+                var target = new GlideRecord('sys_ui_list');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe(TARGET_TABLE_NAME, 'Table name should be correct');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                    expect(target.getValue('view')).toBe(testView.getUniqueValue(), 'View should be correct');
+                } else {
+                    fail('Target UI List not found');
+                }
+
+                // Check if the related List Elements were also copied
+                var targetListElementGr = new GlideRecord('sys_ui_list_element');
+                targetListElementGr.orderBy('position');
+                targetListElementGr.addQuery('list_id', target.getUniqueValue());
+                targetListElementGr.query();
+                if (!targetListElementGr.hasNext()) {
+                    fail('Target UI List Elements not found');
+                }
+
+                var targetElements = [];
+                while (targetListElementGr.next()) {
+                    targetElements.push({
+                        element: targetListElementGr.getValue('element'),
+                        position: targetListElementGr.getValue('position')
+                    });
+                }
+
+                expect(targetElements).toBeEqual(sourceElements, 'Target UI List Elements should be the same as source UI List Elements');
+
+            });
+        });
+
+        describe('copyMetadataBySysId() - UI Section', function() {
+            it('should copy a UI Section and the related UI Elements from one scope to another', function() {
+                // Get the source UI Section
+                var testView = getTestUiView();
+                var source = new GlideRecord('sys_ui_section');
+                source.addQuery('name', SOURCE_TABLE_NAME);
+                source.addQuery('sys_scope.scope', SOURCE_SCOPE);
+                source.addQuery('view', testView.getUniqueValue());
+                source.addOrderBy('position');
+                source.query();
+                if (!source.next()) {
+                    fail('Source UI Section not found');
+                }
+
+                // Get the related UI Elements ordered ascending by position
+                var sourceElementGr = new GlideRecord('sys_ui_element');
+                sourceElementGr.orderBy('position');
+                sourceElementGr.addQuery('sys_ui_section', source.getUniqueValue());
+                sourceElementGr.query();
+                if (!sourceElementGr.hasNext()) {
+                    fail('Source UI Elements not found');
+                }
+                var sourceElements = [];
+                while (sourceElementGr.next()) {
+                    sourceElements.push({
+                        element: sourceElementGr.getValue('element'),
+                        position: sourceElementGr.getValue('position'),
+                        type: sourceElementGr.getValue('type')
+                    });
+                }
+
+                // Copy the UI Section
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                // Check if the UI Section was copied
+                var target = new GlideRecord('sys_ui_section');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe(TARGET_TABLE_NAME, 'Table name should be correct');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                    expect(target.getValue('view')).toBe(testView.getUniqueValue(), 'View should be correct');
+                } else {
+                    fail('Target UI Section not found');
+                }
+
+                // Check if the related UI Elements were also copied
+                var targetElementGr = new GlideRecord('sys_ui_element');
+                targetElementGr.orderBy('position');
+                targetElementGr.addQuery('sys_ui_section', target.getUniqueValue());
+                targetElementGr.query();
+                if (!targetElementGr.hasNext()) {
+                    fail('Target UI Elements not found');
+                }
+
+                var targetElements = [];
+                while (targetElementGr.next()) {
+                    targetElements.push({
+                        element: targetElementGr.getValue('element'),
+                        position: targetElementGr.getValue('position'),
+                        type: targetElementGr.getValue('type')
+                    });
+                }
+
+                expect(targetElements).toBeEqual(sourceElements, 'Target UI Elements should be the same as source UI Elements');
+            });
+        });
+
+        describe('copyMetadataBySysId() - UI Form', function() {
+            it('should copy a UI Form and the related UI Sections from one scope to another', function() {
+                // Get the source UI Form
+                var testView = getTestUiView();
+                var source = new GlideRecord('sys_ui_form');
+                source.addQuery('name', SOURCE_TABLE_NAME);
+                source.addQuery('sys_scope.scope', SOURCE_SCOPE);
+                source.addQuery('view', testView.getUniqueValue());
+                source.query();
+                if (!source.next()) {
+                    fail('Source UI Form not found');
+                }
+
+                // Get the related UI Form Sections ordered ascending by position
+                var sourceFormSectionGr = new GlideRecord('sys_ui_form_section');
+                sourceFormSectionGr.orderBy('position');
+                sourceFormSectionGr.addQuery('sys_ui_form', source.getUniqueValue());
+                sourceFormSectionGr.query();
+                if (!sourceFormSectionGr.hasNext()) {
+                    fail('Source UI Sections not found');
+                }
+                var sourceFormSections = [];
+                while (sourceFormSectionGr.next()) {
+                    sourceFormSections.push({
+                        section: sourceFormSectionGr.getValue('sys_ui_section'),
+                        position: sourceFormSectionGr.getValue('position')
+                    });
+                }
+
+                // Copy the UI Form
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata should not be the same as source metadata');
+
+                // Check if the UI Form was copied
+                var target = new GlideRecord('sys_ui_form');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe(TARGET_TABLE_NAME, 'Table name should be correct');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                    expect(target.getValue('view')).toBe(testView.getUniqueValue(), 'View should be correct');
+                } else {
+                    fail('Target UI Form not found');
+                }
+
+                // Check if the related UI Form Sections were also copied
+                var targetFormSectionGr = new GlideRecord('sys_ui_form_section');
+                targetFormSectionGr.orderBy('position');
+                targetFormSectionGr.addQuery('sys_ui_form', target.getUniqueValue());
+                targetFormSectionGr.query();
+                if (!targetFormSectionGr.hasNext()) {
+                    fail('Target UI Form Sections not found');
+                }
+
+                var targetFormSections = [];
+                while (targetFormSectionGr.next()) {
+                    targetFormSections.push({
+                        section: targetFormSectionGr.getValue('sys_ui_section'),
+                        position: targetFormSectionGr.getValue('position')
+                    });
+                }
+
+                expect(targetFormSections.length).toBe(2, 'Number of sections should be correct');
+                // The target section sys_id should be mapped to the source section sys_id
+                expect(targetFormSections[0].section).toBe(scoper.metadataMap[sourceFormSections[0].section], 'First section should be mapped');
+                expect(targetFormSections[0].position).toBe(sourceFormSections[0].position, 'First section position');
+                expect(targetFormSections[1].section).toBe(scoper.metadataMap[sourceFormSections[1].section], 'Second section should be mapped');
+                gs.log('metadataMap:\n' + JSON.stringify(scoper.metadataMap, null, 2));
+                gs.log('processedRecords:\n' + scoper.getSysProperty('KLF_ScoperUtils.processed_records'));
+                expect(targetFormSections[1].position).toBe(sourceFormSections[1].position, 'Second section position should be correct');
+            });
+        });
+
+        describe('copyMetadataBySysId() - UI Related List', function() {
+            it('should copy a UI Related List and the related List Entries from one scope to another', function() {
+                // Get the source UI Related List
+                var testView = getTestUiView();
+                var source = new GlideRecord('sys_ui_related_list');
+                source.addQuery('name', SOURCE_TABLE_NAME);
+                source.addQuery('sys_scope.scope', SOURCE_SCOPE);
+                source.addQuery('view', testView.getUniqueValue());
+                source.query();
+                if (!source.next()) {
+                    fail('Source UI Related List not found');
+                }
+
+                // Get the related List Entries ordered ascending by position
+                var sourceEntryGr = new GlideRecord('sys_ui_related_list_entry');
+                sourceEntryGr.orderBy('position');
+                sourceEntryGr.addQuery('list_id', source.getUniqueValue());
+                sourceEntryGr.query();
+                if (!sourceEntryGr.hasNext()) {
+                    fail('Source UI Related List Entries not found');
+                }
+                var sourceEntries = [];
+                while (sourceEntryGr.next()) {
+                    sourceEntries.push({
+                        sys_id: sourceEntryGr.getUniqueValue(),
+                        related_list: sourceEntryGr.getValue('related_list'),
+                        list_id: sourceEntryGr.getValue('list_id'),
+                        position: sourceEntryGr.getValue('position')
+                    });
+                }
+
+                // Copy the UI Related List
+                var targetMetadata = scoper.copyMetadataBySysId(source.getUniqueValue());
+                expect(targetMetadata.getUniqueValue()).not.toBe(source.getUniqueValue(), 'Target metadata sys_id should not be the same as source sys_id');
+
+                // Check if the UI Related List was copied
+                var target = new GlideRecord('sys_ui_related_list');
+                if (target.get(targetMetadata.getUniqueValue())) {
+                    expect(target.getValue('name')).toBe(TARGET_TABLE_NAME, 'Target table name');
+                    expect(target.getValue('sys_scope')).toBe(TARGET_SCOPE_SYS_ID, 'Scope should be target scope');
+                    expect(target.getValue('view')).toBe(testView.getUniqueValue(), 'View should be correct');
+                } else {
+                    fail('Target UI Related List not found');
+                }
+
+                // Check if the related List Entries were also copied
+                var targetEntryGr = new GlideRecord('sys_ui_related_list_entry');
+                targetEntryGr.orderBy('position');
+                targetEntryGr.addQuery('list_id', target.getUniqueValue());
+                targetEntryGr.query();
+                if (!targetEntryGr.hasNext()) {
+                    fail('Target UI Related List Entries not found');
+                }
+
+                var targetEntries = [];
+                while (targetEntryGr.next()) {
+                    targetEntries.push({
+                        sys_id: targetEntryGr.getUniqueValue(),
+                        related_list: targetEntryGr.getValue('related_list'),
+                        list_id: targetEntryGr.getValue('list_id'),
+                        position: targetEntryGr.getValue('position')
+                    });
+                }
+
+                expect(targetEntries.length).toBe(sourceEntries.length, 'Number of entries');
+
+                // This is a standard related list
+                var targetEntry1 = targetEntries[0];
+                // This related_list field value looks something like x_53417_scoper_1_scoper_task.parent
+                // so the table name should be updated
+                expect(targetEntry1.related_list).not.toContain(SOURCE_SCOPE, 'Related list should not contain source scope');
+                expect(targetEntry1.related_list).toContain(TARGET_SCOPE, 'Related list should contain target scope');
+
+                // This is a defined Relationship (sys_relationship)
+                // This related_list field value looks something like REL:d559ab8b87a89290e2041f8d3fbb35c4
+                // so the sys_id should be updated to the new sys_id of the sys_relationship in the target scope
+                var targetEntry2 = targetEntries[1];
+                var sourceEntry2 = sourceEntries[1];
+                var sourceRelationshipSysId = sourceEntry2.related_list.split('REL:')[1];
+                var targetRelationshipSysId = scoper.metadataMap[sourceRelationshipSysId];
+                expect(targetEntry2.related_list).toContain(targetRelationshipSysId, 'Relationship sys_id should contain target sys_id');
+            });
+        });
+    });
+}

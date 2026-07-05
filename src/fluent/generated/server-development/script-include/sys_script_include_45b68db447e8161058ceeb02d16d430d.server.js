@@ -1,0 +1,486 @@
+/**
+ * @todo This object is broken right now. Remove the ts-nocheck and fix the issues.
+ * I created it as a way to scope global objects. I stopped working on it because because
+ * I thought the method in KLF_ScoperUtils was a better approach.
+ */
+var global = global || {};
+/**
+ * Object used to copy application elements from one scope to another.
+ * This is useful when you want to duplicate a scoped application to a new scope.
+ * 
+ * The following ServiceNow objects can be copied:
+ * - Script Include (sys_script_include)
+ * - Business Rule (sys_script)
+ * - UI Action (sys_ui_action)
+ * - UI Page (sys_ui_page)
+ * - UI Policy (sys_ui_policy)
+ * - UI Script (sys_ui_script)
+ * - Client Script (sys_client_script)
+ * - REST Message (sys_rest_message)
+ * - UI View (sys_ui_view)
+ * - UI Form (sys_ui_form)
+ * - UI Form Section (sys_ui_section)
+ * - UI List (sys_ui_list)
+ * - UI Related List (sys_ui_related_list)
+ */
+
+/**
+ * @typedef {Object} KLF_ScoperConfig
+ * @property {string} sourceScope - The scope of the source records.
+ * @property {string} targetScope - The scope of the target records.
+ * @property {{[sourceTableName: string]: string}} [tableMap] - A map of source table names to target table names.
+ */
+
+/**
+ * @param {KLF_ScoperConfig} config 
+ * @example
+ * var scoper = new global.KLF_Scoper({
+ *     sourceScope: 'x_53417_scoper_1',
+ *     targetScope: 'x_53417_scoper_2',
+ *     tableMap: {
+ *         'x_53417_scoper_1_scoper_task': 'x_53417_scoper_2_scoper_task'
+ *     }
+ * });
+ * 
+ * // Copy a business rule
+ * var targetBusinessRule = scoper.copyBusinessRule('e509c3784764561058ceeb02d16d4399');
+ * 
+ * // Copy a script include
+ * var targetScriptInclude = scoper.copyScriptInclude('e509c3784764561058ceeb02d16d4399');
+ * 
+ * // Copy a column
+ * var targetColumn = scoper.copyColumn('e509c3784764561058ceeb02d16d4399', 'x_53417_scoper_2_scoper_task');
+ */
+global.KLF_Scoper = function(config) {
+    var _config = config || {};
+    var sourceScopeSysId = this.getScopeSysId(_config.sourceScope);
+    if (!sourceScopeSysId) {
+        throw 'Source scope not found';
+    }
+
+    var targetScopeSysId = this.getScopeSysId(_config.targetScope);
+    if (!targetScopeSysId) {
+        throw 'Target scope not found';
+    }
+
+    this.sourceScope = _config.sourceScope;
+    this.sourceScopeSysId = sourceScopeSysId;
+    this.targetScope = _config.targetScope;
+    this.targetScopeSysId = targetScopeSysId;
+    this.tableMap = _config.tableMap || {};
+};
+
+/**
+ * Extracts all non-system field names from a GlideRecord.
+ * 
+ * This function iterates through all fields of the given GlideRecord
+ * and returns an array of field names that do not start with 'sys_'.
+ * 
+ * @param {GlideRecord} glideRecord - The GlideRecord to extract field names from.
+ * @returns {string[]} An array of non-system field names.
+ */
+global.KLF_Scoper.getNonSysFields = function(glideRecord) {
+    var glideElements = glideRecord.getFields();
+    var elementNames = [];
+    for (var i = 0; i < glideElements.size(); i++) {
+        var glideElement = glideElements.get(i);
+        var name = glideElement.getName();
+        if (!name.startsWith('sys_')) {
+            elementNames.push(name);
+        }
+    }
+    return elementNames;
+};
+
+/**
+ * Used to copy a UI View from the source scope to the target scope.
+ * Note: An empty string is a valid value for the viewName parameter
+ * The empty viewName is the 'Default view' for a table
+ * 
+ * NOTE: The UI View (sys_ui_view) record cannot be copied. The UI View record is a unique record in the sys_ui_view table.
+ * There can only be one, so copying it would result in an error. You must account for the UI View record yourself. Sometimes
+ * this record is in global and does not need to be copied, but other times this record was created by a non-global app and may
+ * need to be created in the target scope.
+ * 
+ * @param {string} viewName sys_ui_view.name
+ * @param {string} tableName This is used to find the related form, form section, and list/related
+ * records associated with the view.
+ * @param {global.KLF_Scoper} scoper 
+ * 
+ * @example
+ * var viewCopier = new global.KLF_Scoper.ViewCopier('My View', 'x_53417_scoper_1_scoper_task');
+ * viewCopier.copy();
+ */
+global.KLF_Scoper.ViewCopier = function(viewName, tableName, scoper) {
+    if (!tableName || !new GlideRecord(tableName).isValid()) {
+        throw 'Table not found';
+    }
+
+    if (typeof viewName != 'string') {
+        throw 'View name must be a string';
+    }
+
+    this.viewName = viewName;
+    this.tableName = tableName;
+    this.scoper = scoper;
+    var view = new GlideRecord('sys_ui_view');
+    view.addQuery('name', this.viewName);
+    view.query();
+    if (!view.next()) {
+        throw 'Source UI view not found';
+    }
+    this.view = view;
+};
+
+global.KLF_Scoper.ViewCopier.prototype = {
+    /**
+     * Copies the entire view. Copies the UI View, Form, Form Section, 
+     * Section Element, List, and Related List
+     * records from the source scope to the target scope.
+     */
+    copy: function() {
+        this.copyFormView();
+    },
+
+    /**
+     * Cop
+     * @param {GlideRecord} view sys_ui_view record
+     */
+    copyUiView: function(view) {
+
+    },
+
+    /**
+     * Copies a Form (sys_ui_form) record from the source scope to the target scope.
+     * @param {GlideRecord} form sys_ui_form record
+     */
+    copyUiForm: function(form) {
+        var source = form;
+        var target = new GlideRecord('sys_ui_form');
+        target.newRecord();
+
+        var elementNames = global.KLF_Scoper.getNonSysFields(form);
+
+        for (var i = 0; i < elementNames.length; i++) {
+            var fieldName = elementNames[i];
+            target.setValue(fieldName, source.getValue(fieldName));
+        }
+
+        // sys fields are not copied a automatically. need to manually set them.
+        target.setValue('sys_name', source.getValue('sys_name'));
+
+        // Update the scope
+        target.setValue('sys_scope', this.scoper.targetScopeSysId);
+
+        // Update the table name
+        target.setValue('name', this.scoper.updateTableNames(source.getValue('name')));
+
+    },
+
+    /**
+     * Copies a form view from the source scope to the target scope.
+     * This includes:
+     * - Form (sys_ui_form), // This looks like it is only created if there are multiple form sections on th form
+     * - Form Section (sys_ui_form_section), // This controls where the section is positioned in the form
+     * - Form Section (sys_ui_section), // This is the container for all the fields in the section
+     * - Section Element (sys_ui_element), // This defines what fields are displayed in the section
+     */
+    copyFormView: function() {
+        // I'm only looking for the first form. I don't think there should be multiple forms
+        // that are not personalized that are associated with a view.
+        var form = new GlideRecord('sys_ui_form');
+        form.addQuery('view', this.view.getUniqueValue());
+        form.addNotNullQuery('sys_user'); // Intentionally excluding personalized views
+        form.orderBy('sys_updated_on'); // Just in case there are multiple forms. I want the one that was updated most recently
+        form.addQuery('name', this.tableName);
+        form.addQuery('sys_scope', this.scoper.sourceScopeSysId);
+        form.query();
+        if (form.next()) {
+            this.copyUiForm(form);
+        }
+
+        // Each form section is a collection of fields that are displayed in the section.
+        var formSection = new GlideRecord('sys_ui_section');
+        formSection.addNotNullQuery('sys_user'); // Intentionally excluding personalized views
+        formSection.addQuery('view', this.view.getUniqueValue());
+        formSection.addQuery('name', this.tableName);
+        formSection.query();
+        while (formSection.next()) {
+            gs.info('Form section found: ' + formSection.getUniqueValue());
+
+            // Each form section could have multiple Section Elements (sys_ui_element) records. These are records
+            // that define what fields are displayed in the section.
+            var sectionElement = new GlideRecord('sys_ui_element');
+            sectionElement.addQuery('sys_ui_section', formSection.getUniqueValue());
+            sectionElement.query();
+            while (sectionElement.next()) {
+                gs.info('Section element found: ' + sectionElement.getUniqueValue());
+            }
+        }
+    }
+};
+
+global.KLF_Scoper.prototype = {
+    /**
+     * Copies a UI Policy from the source scope to the target scope.
+     * Includes any related UI Policy Action (sys_ui_policy_action) records.
+     * Includes any related UI Policy Related List Action (sys_ui_policy_rl_action) records.
+     * @param {string} uiPolicySysId 
+     */
+    copyUiPolicy: function(uiPolicySysId) {},
+
+    /**
+     * Copies a UI View from the source scope to the target scope.
+     * This includes:
+     * - UI View (sys_ui_view), // This is the container for all the lists and forms related to a view name
+     * - Form (sys_ui_form), // This looks like it is only created if there are multiple form sections on th form
+     * - Form Section (sys_ui_form_section), // This controls where the section is positioned in the form
+     * - Form Section (sys_ui_section), // This is the container for all the fields in the section
+     * - Section Element (sys_ui_element), // This defines what fields are displayed in the section
+     * - List (sys_ui_list), // This defines the columns in the list
+     * - Related List (sys_ui_related_list) // This defines the columns in the related list
+     * @param {string} viewName 
+     * @param {string} tableName 
+     */
+    copyUiView: function(viewName, tableName) {
+        // @ts-ignore
+        var viewCopier = new global.KLF_Scoper.ViewCopier(viewName, tableName, this.targetScope, this.targetScopeSysId);
+        viewCopier.copy();
+    },
+
+    /**
+     * Copies a UI Action from the source scope to the target scope.
+     * Includes any related UI Action Visibility (sys_ui_action_view) record.
+     * @param {string} uiActionSysId 
+     */
+    copyUiAction: function(uiActionSysId) {
+        var source = new GlideRecord('sys_ui_action');
+        if (!source.get(uiActionSysId)) {
+            throw 'Source UI action not found';
+        }
+
+        var elementNames = global.KLF_Scoper.getNonSysFields(source);
+
+        var target = new GlideRecord('sys_ui_action');
+        target.newRecord();
+
+        for (var i = 0; i < elementNames.length; i++) {
+            var fieldName = elementNames[i];
+            target.setValue(fieldName, source.getValue(fieldName));
+        }
+
+        // Update the scope
+        target.setValue('sys_scope', this.targetScopeSysId);
+
+        // Update the table name
+        target.setValue('table', this.updateTableNames(source.getValue('table')));
+
+        // Update the script field
+        target.setValue('script', this.updateTableNames(source.getValue('script')));
+
+        // Add any related UI Action Visibility records
+        var uiActionVisibilityGr = new GlideRecord('sys_ui_action_view');
+        uiActionVisibilityGr.addQuery('sys_ui_action', uiActionSysId);
+        uiActionVisibilityGr.query();
+        while (uiActionVisibilityGr.next()) {
+            var targetVisibility = new GlideRecord('sys_ui_action_view');
+            // Check if the target visibility record already exists
+            targetVisibility.addQuery('sys_ui_action', target.getUniqueValue());
+            targetVisibility.addQuery('sys_ui_view', uiActionVisibilityGr.getValue('sys_ui_view'));
+            targetVisibility.query();
+            if (!targetVisibility.next()) {
+                // Doesn't exist, so create a new record
+                targetVisibility.newRecord();
+            }
+
+            targetVisibility.sys_ui_action = target.getUniqueValue();
+            targetVisibility.sys_ui_view = uiActionVisibilityGr.getValue('sys_ui_view');
+            targetVisibility.visibility = uiActionVisibilityGr.getValue('visibility');
+            targetVisibility.setValue('sys_scope', this.targetScopeSysId);
+            targetVisibility.update();
+        }
+
+        if (target.update()) {
+            return target;
+        } else {
+            throw 'Failed to copy UI action';
+        }
+    },
+
+    /**
+     * Copies a business rule from the source scope to the target scope.
+     * @param {string} businessRuleSysId 
+     * @returns {GlideRecord?} the target business rule
+     */
+    copyBusinessRule: function(businessRuleSysId) {
+        var source = new GlideRecord('sys_script');
+        if (!source.get(businessRuleSysId)) {
+            return null;
+        }
+        var elementNames = global.KLF_Scoper.getNonSysFields(source);
+
+        // Now that we have the element names, we can copy the business rule
+        var target = new GlideRecord('sys_script');
+        target.newRecord();
+
+        for (var i = 0; i < elementNames.length; i++) {
+            var fieldName = elementNames[i];
+            target.setValue(fieldName, source.getValue(fieldName));
+        }
+
+        // Update the table name
+        target.setValue('collection', this.updateTableNames(source.getValue('collection')));
+
+        // Update script field
+        target.setValue('script', this.updateTableNames(source.getValue('script')));
+
+        // Set the scope to the target scope
+        target.setValue('sys_scope', this.targetScopeSysId);
+
+        if (target.update()) {
+            return target;
+        } else {
+            throw 'Failed to copy business rule';
+        }
+    },
+
+    /**
+     * Copies a script include from the source scope to the target scope.
+     * @param {string} scriptIncludeSysId 
+     */
+    copyScriptInclude: function(scriptIncludeSysId) {
+        var source = new GlideRecord('sys_script_include');
+        if (!source.get(scriptIncludeSysId)) {
+            throw 'Source script include not found';
+        }
+
+        var elementNames = global.KLF_Scoper.getNonSysFields(source);
+
+        // Now that we have the element names, we can copy the business rule
+        var target = new GlideRecord('sys_script_include');
+        target.newRecord();
+
+        for (var i = 0; i < elementNames.length; i++) {
+            var fieldName = elementNames[i];
+            if (fieldName === 'api_name') {
+                continue;
+            }
+            target.setValue(fieldName, source.getValue(fieldName));
+        }
+
+        // Update the script field
+        target.setValue('script', this.updateTableNames(source.getValue('script')));
+
+        // Update the scope
+        target.setValue('sys_scope', this.targetScopeSysId);
+
+        if (target.update()) {
+            return target;
+        } else {
+            throw 'Failed to copy script include';
+        }
+    },
+
+    /**
+     * Copies a column from the source table to the target table.
+     * @param {string} sysDictionarySysId
+     * @param {string} targetTableName
+     * @returns {GlideRecord?} the sys_dictionary record of the target table
+     */
+    copyColumn: function(sysDictionarySysId, targetTableName) {
+        var source = new GlideRecord('sys_dictionary');
+        if (!source.get(sysDictionarySysId)) {
+            throw 'Source column not found';
+        }
+
+        // Check if the target table exists
+        if (!new GlideRecord(targetTableName).isValid()) {
+            throw 'Target table not found';
+        }
+
+        var target = new GlideRecord('sys_dictionary');
+        target.newRecord();
+
+        // Copy all non-system fields
+        var elementNames = global.KLF_Scoper.getNonSysFields(source);
+        elementNames.forEach(function(fieldName) {
+            target.setValue(fieldName, source.getValue(fieldName));
+        });
+
+        // Update the scope and table name
+        target.setValue('sys_scope', this.targetScopeSysId);
+        target.setValue('name', targetTableName);
+
+        if (target.update()) {
+            return target;
+        } else {
+            throw 'Failed to copy column';
+        }
+    },
+
+    copySPWidget: function() {
+
+    },
+
+    copySPWidgetInstance: function() {},
+
+    copySPPage: function() {
+
+    },
+
+    copySPPortal: function() {
+
+    },
+
+    copyReport: function() {
+
+    },
+
+    /**
+     * @param {string} uiPageSysId 
+     */
+    copyUiPage: function(uiPageSysId) {},
+
+    /**
+     * Updates the table names found in the string using the table map.
+     * 
+     * @param {string} string 
+     * @returns {string}
+     */
+    updateTableNames: function(string) {
+        if (!string) {
+            return string;
+        }
+
+        for (var sourceTableName in this.tableMap) {
+            var targetTableName = this.tableMap[sourceTableName];
+            string = string.replace(new RegExp(sourceTableName, 'g'), targetTableName);
+        }
+        return string;
+    },
+
+
+    /**
+     * Retrieves the sys_id of a scope by its name.
+     * @param {string} scopeName - The name of the scope to look up.
+     * @returns {string|null} The sys_id of the scope if found, null otherwise.
+     */
+    getScopeSysId: function(scopeName) {
+        var scopeGr = new GlideRecord('sys_scope');
+        if (scopeGr.get('scope', scopeName)) {
+            return scopeGr.getUniqueValue();
+        }
+        // Could be global scope. Need to check by name
+        var globalScope = new GlideRecord('sys_scope');
+        globalScope.addQuery('name', scopeName);
+        globalScope.query();
+        if (globalScope.getRowCount() === 1) {
+            globalScope.next();
+            return globalScope.getUniqueValue();
+        } else if (globalScope.getRowCount() > 1) {
+            throw 'Ambiguous scope name. More than one scope found with the name: ' + scopeName;
+        }
+
+        return null;
+    },
+};

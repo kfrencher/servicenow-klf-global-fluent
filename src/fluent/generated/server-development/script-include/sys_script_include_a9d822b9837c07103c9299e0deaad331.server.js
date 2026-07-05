@@ -1,0 +1,229 @@
+//@ts-ignore
+var global = global || {};
+
+/**
+ * @typedef {Object} KLF_ExportRecord
+ * @property {string} xml - The XML representation of the record and its related records.
+ * @property {string} tableName - The name of the table the record belongs to.
+ * @property {string} sysUpdatedOn - The sys_updated_on value of the record.
+ * @property {string} sysId - The sys_id of the record.
+ */
+
+/**
+ * @typedef {{
+ * window: {start:number, end:number}|null,
+ * latestUpdatedOn: string|null,
+ * pageSize: number,
+ * totalRecords: number,
+ * records: KLF_ExportRecord[]
+ * }} KLF_ExportTableResponse
+ */
+
+/**
+ * @class global.KLF_RecordExporter
+ * contains utility functions for exporting records
+ */
+global.KLF_RecordExporter = (function() {
+
+    /**
+     * @param {string} message
+     */
+    function IllegalArgumentError(message) {
+        this.name = 'IllegalArgumentError';
+        this.message = message || '';
+    }
+    IllegalArgumentError.prototype = Object.create(Error.prototype);
+    IllegalArgumentError.prototype.constructor = IllegalArgumentError;
+
+    const emptyConnectionConfig = {
+        instanceUrl: '',
+        username: '',
+        password: ''
+    };
+
+    return class {
+        /**
+         * @param {string} propertyName 
+         * @returns {KLF_RecordSync_UserMapping}
+         */
+        getUserMapping(propertyName) {
+            const mapping = this._getMapping(propertyName);
+            // @ts-ignore
+            if (!mapping.hasOwnProperty('hasMissingUsers')) {
+                throw new Error(`User preference ${propertyName} is not a User Mapping`);
+            }
+            return /** @type {KLF_RecordSync_UserMapping} */ (mapping);
+        }
+
+        /**
+         * @param {string} propertyName 
+         * @returns {KLF_RecordSync_GroupMapping}
+         */
+        getGroupMapping(propertyName) {
+            const mapping = this._getMapping(propertyName);
+            // @ts-ignore
+            if (!mapping.hasOwnProperty('hasMissingGroups')) {
+                throw new Error(`User preference ${propertyName} is not a Group Mapping`);
+            }
+            return /** @type {KLF_RecordSync_GroupMapping} */ (mapping);
+        }
+
+        /**
+         * Internal method that handles the parsing.
+         * @private
+         * @param {string} propertyName 
+         * @returns {KLF_RecordSync_UserMapping | KLF_RecordSync_GroupMapping} 
+         */
+        _getMapping(propertyName) {
+            const propertyValue = gs.getUser().getPreference(propertyName);
+
+            if (!propertyValue) {
+                throw Error('User preference ' + propertyName + ' is not set');
+            }
+
+            try {
+                const mapping = JSON.parse(propertyValue);
+
+                if (mapping.hasOwnProperty('hasMissingUsers')) {
+                    return /** @type {KLF_RecordSync_UserMapping} **/ (mapping);
+                }
+
+                if (mapping.hasOwnProperty('hasMissingGroups')) {
+                    return /** @type {KLF_RecordSync_GroupMapping} **/ (mapping);
+                }
+
+                throw Error('Mapping user preference ' + propertyName + ' is not a valid user or group mapping');
+            } catch (e) {
+                throw Error('Failed to parse mapping user preference ' + propertyName);
+            }
+        }
+
+        /**
+         * Takes a GlideRecord and exports it as an XML string, including related records.
+         * @param {GlideRecord} glideRecord 
+         * @param {KLF_RecordSync_UserMapping?} [userMapping] Optional mapping of user sys_ids to usernames for related fields.
+         * @param {KLF_RecordSync_GroupMapping?} [groupMapping] Optional mapping of group sys_ids to group names for related fields.
+         * @returns {string}
+         */
+        exportRecord(glideRecord, userMapping, groupMapping) {
+            var recordSync = new global.KLF_RecordSync(emptyConnectionConfig, groupMapping, userMapping);
+            const record = recordSync.unloadRecordWithRelatedRecords(glideRecord);
+            return recordSync.documentToString(record.document, true);
+        }
+
+        /**
+         * @param {KLF_RecordImporterOptions[]} options 
+         * @returns {KLF_TableInfo[]}
+         */
+        getTableInfo(options) {
+            return options.map(option => {
+                if (!option.tableName) {
+                    throw new IllegalArgumentError('Table name is required for each option');
+                }
+                const glideRecord = this.createQueryForExport(option);
+                glideRecord.query();
+                return {
+                    tableName: option.tableName,
+                    rowCount: glideRecord.getRowCount()
+                };
+            });
+        }
+
+        /**
+         * Creates a GlideRecord query for exporting records based on the provided options.
+         * @param {*} options 
+         * @returns {GlideRecord}
+         */
+        createQueryForExport(options) {
+            const tableName = options.tableName;
+            const encodedQueryString = options.encodedQueryString;
+            const excludedTables = options.excludedTables;
+
+            var glideRecord = new GlideRecord(tableName);
+            glideRecord.orderBy('sys_updated_on');
+            glideRecord.orderBy('sys_id');
+
+            if (encodedQueryString) {
+                glideRecord.addEncodedQuery(encodedQueryString);
+            }
+
+            if (excludedTables && excludedTables.length > 0 && glideRecord.isValidField('sys_class_name')) {
+                glideRecord.addQuery('sys_class_name', 'NOT IN', excludedTables);
+            }
+
+            return glideRecord;
+        }
+
+        /**
+         * Exports records from a specified table based on a query string, optionally excluding certain tables and mapping user and group fields.
+         * @param {{
+         * tableName: string,
+         * encodedQueryString?: string,
+         * excludedTables?: string[],
+         * window?: {start:number, end:number},
+         * scopeName?: string,
+         * skipMapping?: boolean
+         * }} options
+         * @returns {KLF_ExportTableResponse} 
+         */
+        exportTable(options) {
+            let latestUpdatedOn = null;
+            /** @type {KLF_ExportRecord[]} */
+            const exportedRecords = [];
+
+            options = options || /** @type {any} */ ({});
+            const tableName = options.tableName;
+            const encodedQueryString = options.encodedQueryString;
+            const excludedTables = options.excludedTables;
+            const window = options.window;
+            const scopeName = options.scopeName;
+            const skipMapping = options.skipMapping;
+            const userMapping = scopeName && !skipMapping ? this.getUserMapping(scopeName + '.mapping.user') : null;
+            const groupMapping = scopeName && !skipMapping ? this.getGroupMapping(scopeName + '.mapping.group') : null;
+
+            if (!tableName) {
+                throw new IllegalArgumentError('Table name is required');
+            }
+
+
+            var glideRecord = new GlideRecord(tableName);
+            if (!glideRecord.isValid()) {
+                return {
+                    window: window || null,
+                    pageSize: 0,
+                    totalRecords: 0,
+                    latestUpdatedOn: null,
+                    records: []
+                };
+            }
+
+            glideRecord = this.createQueryForExport(options);
+
+            let pageSize = -1;
+            if (window && typeof window.start === 'number' && typeof window.end === 'number' &&
+                window.start >= 0 && window.end > window.start) {
+                glideRecord.chooseWindow(window.start, window.end);
+                pageSize = window.end - window.start;
+            }
+
+            glideRecord.query();
+            while (glideRecord.next()) {
+                exportedRecords.push({
+                    xml: this.exportRecord(glideRecord, userMapping, groupMapping),
+                    tableName: glideRecord.isValidField('sys_class_name') ? glideRecord.getRecordClassName() : glideRecord.getTableName(),
+                    sysUpdatedOn: glideRecord.getValue('sys_updated_on'),
+                    sysId: glideRecord.getValue('sys_id')
+                });
+                latestUpdatedOn = glideRecord.getValue('sys_updated_on');
+            }
+
+            return {
+                window: window || null,
+                pageSize: pageSize,
+                totalRecords: glideRecord.getRowCount(),
+                latestUpdatedOn: latestUpdatedOn,
+                records: exportedRecords
+            };
+        }
+    };
+})();

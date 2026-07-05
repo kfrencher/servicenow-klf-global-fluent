@@ -1,0 +1,138 @@
+var global = global || {};
+
+/**
+ * Creates a mock RESTAPIResponse object for testing purposes.
+ * @constructor
+ * @param {Object} config - Configuration object for the mock response.
+ * @param {number} [config.status=200] - The HTTP status code of the response.
+ * @param {{[key:string]:string}} [config.headers={}] - The response headers.
+ * @param {*} [config.body=null] - The response body.
+ */
+global.KLF_TestMockRESTAPIResponse = function(config) {
+    config = config || {};
+    this.status = config.status || 200;
+    /** @type {{[key:string]:string}} */
+    this.headers = config.headers || {};
+    this.body = config.body || null;
+    /** @type {string} */
+    this.error = '';
+    /** @type {any} */
+    this.streamWriter = null;
+};
+
+/**
+ * Sets the HTTP status code of the response.
+ * @param {number} code - The HTTP status code to set.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.setStatus = function(code) {
+    this.status = code;
+};
+
+/**
+ * Sets multiple headers at once.
+ * @param {{[key:string]:string}} headers - An object containing header key-value pairs.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.setHeaders = function(headers) {
+    for (var key in headers) {
+        if (headers.hasOwnProperty(key)) {
+            this.headers[key] = headers[key];
+        }
+    }
+};
+
+/**
+ * Sets a single header.
+ * @param {string} name - The name of the header.
+ * @param {string} value - The value of the header.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.setHeader = function(name, value) {
+    this.headers[name] = value;
+};
+
+/**
+ * Sets the Location header.
+ * @param {string} locationValue - The value for the Location header.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.setLocation = function(locationValue) {
+    this.setHeader('Location', locationValue);
+};
+
+/**
+ * Sets the Content-Type header.
+ * @param {string} contentType - The value for the Content-Type header.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.setContentType = function(contentType) {
+    this.setHeader('Content-Type', contentType);
+};
+
+/**
+ * Sets an error for the response.
+ * @param {*} error - The error to set.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.setError = function(error) {
+    this.error = error;
+};
+
+/**
+ * Sets the response body.
+ * @param {*} body - The body content to set.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.setBody = function(body) {
+    this.body = body;
+};
+
+/**
+ * Gets a stream writer for the response.
+ * @returns {global.KLF_TestMockRESTAPIResponse.MockRESTAPIResponseStream} A mock stream writer.
+ */
+global.KLF_TestMockRESTAPIResponse.prototype.getStreamWriter = function() {
+    if (!this.streamWriter) {
+        this.streamWriter = new global.KLF_TestMockRESTAPIResponse.MockRESTAPIResponseStream();
+    }
+    return this.streamWriter;
+};
+
+/**
+ * Creates a mock RESTAPIResponseStream object for testing purposes.
+ * @constructor
+ */
+global.KLF_TestMockRESTAPIResponse.MockRESTAPIResponseStream = function() {
+    this.content = '';
+};
+
+/**
+ * Writes a string to the stream.
+ * @param {string} stringToWrite - The string to write to the stream.
+ */
+global.KLF_TestMockRESTAPIResponse.MockRESTAPIResponseStream.prototype.writeString = function(stringToWrite) {
+    this.content += stringToWrite;
+};
+
+/**
+ * Simulates writing a stream to the response.
+ * @param {*} inputStream - The input stream to write (not actually used in this mock).
+ */
+global.KLF_TestMockRESTAPIResponse.MockRESTAPIResponseStream.prototype.writeStream = function(inputStream) {
+    this.content += '[Stream Content]';
+};
+
+// Additional methods for testing and debugging
+global.KLF_TestMockRESTAPIResponse.prototype.getStatus = function() {
+    return this.status;
+};
+
+global.KLF_TestMockRESTAPIResponse.prototype.getHeaders = function() {
+    return this.headers;
+};
+
+global.KLF_TestMockRESTAPIResponse.prototype.getBody = function() {
+    return this.body;
+};
+
+global.KLF_TestMockRESTAPIResponse.prototype.getError = function() {
+    return this.error;
+};
+
+global.KLF_TestMockRESTAPIResponse.MockRESTAPIResponseStream.prototype.getContent = function() {
+    return this.content;
+};

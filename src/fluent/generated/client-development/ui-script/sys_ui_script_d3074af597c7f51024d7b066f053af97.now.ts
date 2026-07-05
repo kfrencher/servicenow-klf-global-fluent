@@ -1,0 +1,178 @@
+import { Record } from '@servicenow/sdk/core'
+
+Record({
+    $id: Now.ID['d3074af597c7f51024d7b066f053af97'],
+    table: 'sys_ui_script',
+    data: {
+        active: 'false',
+        global: 'true',
+        ignore_in_now_experience: 'false',
+        name: 'KLF_RecordWatcher',
+        script: `var KLF_RecordWatcher = (function (/** @type {AMBClient} */ amb) {
+    var watcherChannel;
+    var connected = false;
+    var diagnosticLog = true;
+
+    /**
+     * @param {string} filter 
+     * @returns {string}
+     */
+    function getFilterString(filter) {
+        filter = filter
+            .replace(/\\^EQ/g, "")
+            .replace(/\\^ORDERBY(?:DESC)?[^^]*/g, "")
+            .replace(/^GOTO/, "");
+        return btoa(filter).replace(/=/g, "-");
+    }
+
+    /**
+     * 
+     * @param {string} table 
+     * @param {string} filter 
+     * @returns 
+     */
+    function getChannelRW(table, filter) {
+        var t = "/rw/default/" + table + "/" + getFilterString(filter);
+        return amb.getChannel(t);
+    }
+
+    /**
+     * @param {string} table 
+     * @param {string} sys_id 
+     * @param {string?} [query]
+     */
+    function initWatcher(table, sys_id, query) {
+        if (!table) return;
+
+        var filter = sys_id ? "sys_id=" + sys_id : query;
+
+        if (!filter) return;
+
+        return initChannel(table, filter);
+    }
+
+    /**
+     * @param {string} table 
+     * @param {string} query 
+     */
+    function initList(table, query) {
+        if (!table) return;
+        query = query || "sys_idISNOTEMPTY";
+        return initChannel(table, query);
+    }
+
+    /**
+     * @param {string[]} list 
+     * @param {any} prevChannel 
+     * @returns {any}
+     */
+    function initTaskList(list, prevChannel) {
+        if (prevChannel) prevChannel.unsubscribe();
+        var sys_ids = list.toString();
+        var filter = "sys_idIN" + sys_ids;
+        return initChannel("task", filter);
+    }
+
+    /**
+     * 
+     * @param {string} table 
+     * @param {string} filter 
+     * @param {(data:any)=>void} [onMessage]
+     * @returns 
+     */
+    function initChannel(table, filter, onMessage) {
+        if (isBlockedTable(table)) {
+            log("Blocked from watching" + table);
+            return null;
+        }
+
+        if (diagnosticLog) log(">>> init " + table + "?" + filter);
+
+        watcherChannel = getChannelRW(table, filter);
+        watcherChannel.subscribe(onMessage || defaultOnMessage);
+        amb.connect();
+        return watcherChannel;
+    }
+
+    /**
+     * @param {AMBMessage} message 
+     */
+    function defaultOnMessage(message) {
+        var r = message.data;
+        var c = message.channel;
+        if (diagnosticLog) log(r);
+    }
+
+    /**
+     * @typedef {{
+     * data: any,
+     * channel: string
+     * }} AMBMessage
+     */
+    /**
+     * @param {string} message 
+     */
+    function log(message) {
+        console.log(message);
+    }
+
+    /**
+     * @param {string} table 
+     * @returns 
+     */
+    function isBlockedTable(table) {
+        return table == "sys_amb_message" || table.startsWith("sys_rw");
+    }
+
+    return {
+        initTaskList: initTaskList,
+        initChannel: initChannel,
+        /**
+         * @param {string} table 
+         * @param {string} sys_id 
+         * @param {string} query 
+         */
+        init: function (table, sys_id, query) {
+            initWatcher(table, sys_id, query);
+        },
+        initList: initList,
+        /**
+         * @param {string} table 
+         * @param {string} sysId 
+         */
+        initRecord: function (table, sysId) {
+            initWatcher(table, sysId, null);
+        },
+    };
+    // @ts-ignore
+})(window.top.g_ambClient);
+
+addRenderEvent(() => {
+    // @ts-ignore
+    if (window.g_form) {
+        var table = g_form.getTableName();
+        var sysId = g_form.getUniqueValue();
+        var filter = "sys_id=" + sysId;
+        console.info("KLF_RecordWatcher: Starting to watch " + filter);
+        KLF_RecordWatcher.initChannel(table, filter, (message) => {
+            console.log(
+                "KLF_RecordWatcher: " + JSON.stringify(message, null, 4)
+            );
+            var auditRequest = new GlideAjax("x_53417_demo.Ajax");
+            auditRequest.addParam("sysparm_name", "createAuditEntry");
+            auditRequest.addParam("entry_data", JSON.stringify(message));
+            auditRequest.getXMLAnswer((answer) => {
+                console.info("KLF_RecordWatcher: saved audit entry");
+            });
+        });
+    } else {
+        console.info(
+            "KLF_RecordWatcher: g_form is not defined. Could not add render event"
+        );
+    }
+});
+`,
+        ui_type: '0',
+        use_scoped_format: 'false',
+    },
+})
