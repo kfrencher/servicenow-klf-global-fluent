@@ -10,7 +10,9 @@
         "build": "now-sdk build",
         "deploy": "now-sdk install",
         "transform": "now-sdk transform",
-        "types": "now-sdk dependencies"
+        "types": "now-sdk dependencies",
+        "rename-generated:dry": "node scripts/rename-generated-artifacts.mjs",
+        "rename-generated:apply": "node scripts/rename-generated-artifacts.mjs --apply"
     },
     "devDependencies": {
         "@servicenow/sdk": "4.8.1",
