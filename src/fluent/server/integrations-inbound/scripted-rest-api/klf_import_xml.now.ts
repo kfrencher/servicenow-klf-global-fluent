@@ -199,7 +199,6 @@ RestApi({
         {
             $id: Now.ID['655beaab47fb421058ceeb02d16d4341'],
             name: 'Roles',
-            consumes: 'application/json',
             script: Now.include('./sys_ws_operation_655beaab47fb421058ceeb02d16d4341.js'),
             produces: 'application/json',
             path: '/roles',

@@ -5,7 +5,7 @@ Form({
     view: default_view,
     sections: [
         {
-            caption: '',
+            caption: 'KLF_RecordImporter_State',
             content: [
                 {
                     layout: 'two-column',
