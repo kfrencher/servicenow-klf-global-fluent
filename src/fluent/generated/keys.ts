@@ -744,7 +744,6 @@ declare global {
                     ec9cde01ff8ec31020d2333663e972f7: {
                         table: 'sys_properties'
                         id: 'ec9cde01ff8ec31020d2333663e972f7'
-                        deleted: true
                     }
                     ed33a5d197682910b2e1f97e6253af0a: {
                         table: 'sys_script_include'
