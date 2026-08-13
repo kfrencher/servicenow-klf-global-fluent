@@ -9,6 +9,7 @@
     "scripts": {
         "build": "now-sdk build",
         "deploy": "now-sdk install",
+        "clean": "now-sdk clean",
         "transform": "now-sdk transform",
         "types": "now-sdk dependencies",
         "rename-generated:dry": "node scripts/rename-generated-artifacts.mjs",
