@@ -73,11 +73,6 @@ declare global {
                         table: 'sys_script_include'
                         id: '14fdf96b4704921058ceeb02d16d43d2'
                     }
-                    '16e8252c4714d61058ceeb02d16d4357': {
-                        table: 'sys_atf_step'
-                        id: '16e8252c4714d61058ceeb02d16d4357'
-                        deleted: true
-                    }
                     '170eb3fd97346510b2e1f97e6253aff5': {
                         table: 'sys_script_client'
                         id: '170eb3fd97346510b2e1f97e6253aff5'
@@ -190,11 +185,6 @@ declare global {
                         table: 'sys_atf_test'
                         id: '3b01243997e8a910b2e1f97e6253afd1'
                     }
-                    '3b0a6b6797202550b2e1f97e6253afb6': {
-                        table: 'sys_atf_step'
-                        id: '3b0a6b6797202550b2e1f97e6253afb6'
-                        deleted: true
-                    }
                     '3c254083ffbd831020d2333663e9725d': {
                         table: 'sys_script'
                         id: '3c254083ffbd831020d2333663e9725d'
@@ -210,11 +200,6 @@ declare global {
                     '4067ab1d834903903c9299e0deaad388': {
                         table: 'sys_ws_operation'
                         id: '4067ab1d834903903c9299e0deaad388'
-                    }
-                    '4252972b97ace150b2e1f97e6253afb5': {
-                        table: 'sys_atf_step'
-                        id: '4252972b97ace150b2e1f97e6253afb5'
-                        deleted: true
                     }
                     '4255768847c0121058ceeb02d16d4397': {
                         table: 'sys_properties'
@@ -256,16 +241,6 @@ declare global {
                         table: 'sys_script_include'
                         id: '4c4b2d5847dc561058ceeb02d16d43eb'
                     }
-                    '4c9b32e447d8d61058ceeb02d16d43a1': {
-                        table: 'sys_atf_step'
-                        id: '4c9b32e447d8d61058ceeb02d16d43a1'
-                        deleted: true
-                    }
-                    '4d798d1e97246d10b2e1f97e6253af7f': {
-                        table: 'sys_atf_step'
-                        id: '4d798d1e97246d10b2e1f97e6253af7f'
-                        deleted: true
-                    }
                     '4dfce3984798961058ceeb02d16d4312': {
                         table: 'sys_properties'
                         id: '4dfce3984798961058ceeb02d16d4312'
@@ -305,11 +280,6 @@ declare global {
                     '5b4d2f71837632103c9299e0deaad31f': {
                         table: 'sys_script_include'
                         id: '5b4d2f71837632103c9299e0deaad31f'
-                    }
-                    '5be127474704121058ceeb02d16d43c9': {
-                        table: 'sys_atf_step'
-                        id: '5be127474704121058ceeb02d16d43c9'
-                        deleted: true
                     }
                     '5ca56b5e4784121058ceeb02d16d4318': {
                         table: 'sys_script_include'
@@ -367,11 +337,6 @@ declare global {
                         table: 'sys_atf_test'
                         id: '6ad6f8a6474c121058ceeb02d16d4361'
                     }
-                    '6e59891e97246d10b2e1f97e6253af13': {
-                        table: 'sys_atf_test'
-                        id: '6e59891e97246d10b2e1f97e6253af13'
-                        deleted: true
-                    }
                     '6f005c9397152110b2e1f97e6253af8f': {
                         table: 'sys_script'
                         id: '6f005c9397152110b2e1f97e6253af8f'
@@ -391,11 +356,6 @@ declare global {
                     '71f6d0db97152110b2e1f97e6253afff': {
                         table: 'sysevent_register'
                         id: '71f6d0db97152110b2e1f97e6253afff'
-                    }
-                    '730a6b6797202550b2e1f97e6253afb3': {
-                        table: 'sys_atf_test'
-                        id: '730a6b6797202550b2e1f97e6253afb3'
-                        deleted: true
                     }
                     '7323a9159725061024d7b066f053af7c': {
                         table: 'sys_ws_definition'
@@ -424,11 +384,6 @@ declare global {
                     '7abab885ff82c31020d2333663e972bc': {
                         table: 'sys_properties'
                         id: '7abab885ff82c31020d2333663e972bc'
-                    }
-                    '7c135f6b97ace150b2e1f97e6253af15': {
-                        table: 'sys_atf_test'
-                        id: '7c135f6b97ace150b2e1f97e6253af15'
-                        deleted: true
                     }
                     '7d731b6b97ace150b2e1f97e6253afcc': {
                         table: 'sys_script_include'
@@ -470,11 +425,6 @@ declare global {
                         table: 'sys_properties'
                         id: '84b5016d972e021024d7b066f053af5e'
                     }
-                    '85798d1e97246d10b2e1f97e6253af7c': {
-                        table: 'sys_atf_test'
-                        id: '85798d1e97246d10b2e1f97e6253af7c'
-                        deleted: true
-                    }
                     '8a24324e833c36103c9299e0deaad32d': {
                         table: 'sys_atf_test'
                         id: '8a24324e833c36103c9299e0deaad32d'
@@ -503,11 +453,6 @@ declare global {
                         table: 'sys_ui_action'
                         id: '8f015ba797ace150b2e1f97e6253af49'
                     }
-                    '901c6463478c521058ceeb02d16d436f': {
-                        table: 'sys_atf_step'
-                        id: '901c6463478c521058ceeb02d16d436f'
-                        deleted: true
-                    }
                     '905762b9837c07103c9299e0deaad344': {
                         table: 'sys_script_include'
                         id: '905762b9837c07103c9299e0deaad344'
@@ -524,11 +469,6 @@ declare global {
                         table: 'sp_widget'
                         id: '92c07f6f97f6211024d7b066f053afaa'
                     }
-                    '938b5f3297a42150b2e1f97e6253af86': {
-                        table: 'sys_atf_step'
-                        id: '938b5f3297a42150b2e1f97e6253af86'
-                        deleted: true
-                    }
                     '95c4368e833c36103c9299e0deaad3cc': {
                         table: 'sys_atf_step'
                         id: '95c4368e833c36103c9299e0deaad3cc'
@@ -544,11 +484,6 @@ declare global {
                     '96878b4e8330c7103c9299e0deaad3e4': {
                         table: 'sys_script_include'
                         id: '96878b4e8330c7103c9299e0deaad3e4'
-                    }
-                    '96cdf5e74704921058ceeb02d16d432e': {
-                        table: 'sys_atf_step'
-                        id: '96cdf5e74704921058ceeb02d16d432e'
-                        deleted: true
                     }
                     '973c6b984798961058ceeb02d16d4358': {
                         table: 'sys_properties'
@@ -569,11 +504,6 @@ declare global {
                     '9ca047a5835543143c9299e0deaad3c8': {
                         table: 'sysevent_register'
                         id: '9ca047a5835543143c9299e0deaad3c8'
-                    }
-                    '9fa9978b47c0121058ceeb02d16d437f': {
-                        table: 'sys_atf_step'
-                        id: '9fa9978b47c0121058ceeb02d16d437f'
-                        deleted: true
                     }
                     '9fbb75a99762421024d7b066f053af23': {
                         table: 'sys_ws_operation'
@@ -602,11 +532,6 @@ declare global {
                     a61315288315e2103c9299e0deaad380: {
                         table: 'sys_script_include'
                         id: 'a61315288315e2103c9299e0deaad380'
-                    }
-                    a7adf5674704921058ceeb02d16d43e0: {
-                        table: 'sys_atf_test'
-                        id: 'a7adf5674704921058ceeb02d16d43e0'
-                        deleted: true
                     }
                     a9d822b9837c07103c9299e0deaad331: {
                         table: 'sys_script_include'
@@ -667,11 +592,6 @@ declare global {
                     cf2feedeff52321020d2333663e97267: {
                         table: 'sp_angular_provider'
                         id: 'cf2feedeff52321020d2333663e97267'
-                    }
-                    cff19764475cd61058ceeb02d16d4367: {
-                        table: 'sys_properties'
-                        id: 'cff19764475cd61058ceeb02d16d4367'
-                        deleted: true
                     }
                     d165423a87285290e2041f8d3fbb354c: {
                         table: 'sys_script_include'
@@ -749,11 +669,6 @@ declare global {
                         table: 'sys_script_include'
                         id: 'ed33a5d197682910b2e1f97e6253af0a'
                     }
-                    f0135f6b97ace150b2e1f97e6253af2d: {
-                        table: 'sys_atf_step'
-                        id: 'f0135f6b97ace150b2e1f97e6253af2d'
-                        deleted: true
-                    }
                     f5e1f8d8477b461058ceeb02d16d4320: {
                         table: 'sys_properties'
                         id: 'f5e1f8d8477b461058ceeb02d16d4320'
@@ -761,16 +676,6 @@ declare global {
                     f6ffc8874723021058ceeb02d16d4371: {
                         table: 'atf_input_variable'
                         id: 'f6ffc8874723021058ceeb02d16d4371'
-                    }
-                    f87e5f034704121058ceeb02d16d432c: {
-                        table: 'sys_atf_step'
-                        id: 'f87e5f034704121058ceeb02d16d432c'
-                        deleted: true
-                    }
-                    f909ea204798d61058ceeb02d16d43b3: {
-                        table: 'sys_atf_step'
-                        id: 'f909ea204798d61058ceeb02d16d43b3'
-                        deleted: true
                     }
                     faeddb9387e4d290e2041f8d3fbb358b: {
                         table: 'sys_script_include'
@@ -821,15 +726,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: '020969ac4714d61058ceeb02d16d4359'
-                        deleted: true
-                        key: {
-                            document_key: '16e8252c4714d61058ceeb02d16d4357'
-                            variable: '989d9e235324220002c6435723dc3484'
-                        }
-                    },
-                    {
                         table: 'sys_documentation'
                         id: '029ae02cc6fe41c1818439fe2c76d420'
                         key: {
@@ -858,15 +754,6 @@ declare global {
                             }
                             element: '.begin_split'
                             position: '0'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: '0a0969ac4714d61058ceeb02d16d4358'
-                        deleted: true
-                        key: {
-                            document_key: '16e8252c4714d61058ceeb02d16d4357'
-                            variable: '42f2564b73031300440211d8faf6a777'
                         }
                     },
                     {
@@ -975,16 +862,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_element_mapping'
-                        id: '1d263b9eff304e10b602666560310eb0'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: 'ec64243d97e8a910b2e1f97e6253af4d'
-                        }
-                    },
-                    {
                         table: 'sys_variable_value'
                         id: '1d8e59bec6b642be80e98fdb0febca4b'
                         key: {
@@ -1037,15 +914,6 @@ declare global {
                         id: '22db58eb2add4a5593e7f4ab24d5c97c'
                         key: {
                             name: 'u_klf_recordimporter_state_user'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: '23c8efd04798961058ceeb02d16d43b9'
-                        deleted: true
-                        key: {
-                            document_key: '96cdf5e74704921058ceeb02d16d432e'
-                            variable: '989d9e235324220002c6435723dc3484'
                         }
                     },
                     {
@@ -1144,25 +1012,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: '3429ee204798d61058ceeb02d16d43bc'
-                        deleted: true
-                        key: {
-                            document_key: 'f909ea204798d61058ceeb02d16d43b3'
-                            variable: '989d9e235324220002c6435723dc3484'
-                        }
-                    },
-                    {
-                        table: 'sys_element_mapping'
-                        id: '350d85cf3f4f47f0aab1f2a8e33ad58b'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '141b659c4798561058ceeb02d16d43ab'
-                        }
-                    },
-                    {
                         table: 'sys_choice'
                         id: '362757e1831943143c9299e0deaad3a1'
                         key: {
@@ -1186,22 +1035,6 @@ declare global {
                             }
                             element: 'u_name'
                             position: '0'
-                        }
-                    },
-                    {
-                        table: 'sys_ui_section'
-                        id: '375128ed830143903c9299e0deaad3ad'
-                        deleted: true
-                        key: {
-                            name: 'u_klf_recordimporter_state'
-                            caption: 'Import State'
-                            view: {
-                                id: 'Default view'
-                                key: {
-                                    name: 'NULL'
-                                }
-                            }
-                            sys_domain: 'global'
                         }
                     },
                     {
@@ -1238,15 +1071,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_dictionary'
-                        id: '3afbc6d9838dcf503c9299e0deaad343'
-                        deleted: true
-                        key: {
-                            name: 'u_klf_recordimporter_state'
-                            element: 'u_value'
-                        }
-                    },
-                    {
                         table: 'sys_ui_element'
                         id: '3b4bc13cff46431020d2333663e97224'
                         key: {
@@ -1261,42 +1085,6 @@ declare global {
                             }
                             element: 'u_group_mapping'
                             position: '12'
-                        }
-                    },
-                    {
-                        table: 'sys_ui_element'
-                        id: '3b5128ed830143903c9299e0deaad3f4'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: 'u_loaded_data_json'
-                            position: '7'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: '3b52d72b97ace150b2e1f97e6253af5f'
-                        deleted: true
-                        key: {
-                            document_key: '4252972b97ace150b2e1f97e6253afb5'
-                            variable: '523c79985f30220012b44adb7f46663a'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: '3c29ee204798d61058ceeb02d16d43bb'
-                        deleted: true
-                        key: {
-                            document_key: 'f909ea204798d61058ceeb02d16d43b3'
-                            variable: '42f2564b73031300440211d8faf6a777'
                         }
                     },
                     {
@@ -1331,16 +1119,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_element_mapping'
-                        id: '3d9d3fcd6cf14878a555fb19c430c5e9'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '833885444718161058ceeb02d16d4302'
-                        }
-                    },
-                    {
                         table: 'sys_security_acl_role'
                         id: '3e34a1929b6b42e0b8a3558169258baa'
                         key: {
@@ -1368,24 +1146,6 @@ declare global {
                             }
                             element: 'u_data_manifest'
                             position: '8'
-                        }
-                    },
-                    {
-                        table: 'sys_ui_element'
-                        id: '3f5128ed830143903c9299e0deaad3f1'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: '.end_split'
-                            position: '3'
                         }
                     },
                     {
@@ -1430,29 +1190,11 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: '45798d1e97246d10b2e1f97e6253af81'
-                        deleted: true
-                        key: {
-                            document_key: '4d798d1e97246d10b2e1f97e6253af7f'
-                            variable: '42f2564b73031300440211d8faf6a777'
-                        }
-                    },
-                    {
                         table: 'sys_dictionary'
                         id: '4a9be8c7f0184ccbbcf5dadec2bdc5a8'
                         key: {
                             name: 'u_klf_recordimporter_state'
                             element: 'u_force_transform_all'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: '4d798d1e97246d10b2e1f97e6253af81'
-                        deleted: true
-                        key: {
-                            document_key: '4d798d1e97246d10b2e1f97e6253af7f'
-                            variable: '989d9e235324220002c6435723dc3484'
                         }
                     },
                     {
@@ -1491,15 +1233,6 @@ declare global {
                             }
                             element: 'u_transform_position'
                             position: '5'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: '5d02af034704121058ceeb02d16d4361'
-                        deleted: true
-                        key: {
-                            document_key: '5be127474704121058ceeb02d16d43c9'
-                            variable: '989d9e235324220002c6435723dc3484'
                         }
                     },
                     {
@@ -1634,16 +1367,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_element_mapping'
-                        id: '72dfeeebdd1a4f219f9bfec0ee043001'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '1f93f3d847d8961058ceeb02d16d430e'
-                        }
-                    },
-                    {
                         table: 'sys_ui_section'
                         id: '731de6685ed54852b5d97ffe22c99247'
                         key: {
@@ -1673,33 +1396,6 @@ declare global {
                             }
                             element: '.end_split'
                             position: '7'
-                        }
-                    },
-                    {
-                        table: 'sys_ui_element'
-                        id: '735128ed830143903c9299e0deaad3f1'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: 'u_state'
-                            position: '2'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: '748edf8f47c0121058ceeb02d16d43b8'
-                        deleted: true
-                        key: {
-                            document_key: 'f87e5f034704121058ceeb02d16d432c'
-                            variable: '989d9e235324220002c6435723dc3484'
                         }
                     },
                     {
@@ -1759,16 +1455,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_element_mapping'
-                        id: '7a9b7fd9c0604b2fb62a488890fbac39'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '5f0fa6f54700121058ceeb02d16d430f'
-                        }
-                    },
-                    {
                         table: 'sys_documentation'
                         id: '7af4812936de4e1cbe276be3079c7401'
                         key: {
@@ -1812,24 +1498,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_ui_element'
-                        id: '7f5128ed830143903c9299e0deaad3f3'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: 'u_checkpoint'
-                            position: '6'
-                        }
-                    },
-                    {
                         table: 'sys_variable_value'
                         id: '80851403972c4880ae3fdb2bd1936a0f'
                         key: {
@@ -1850,16 +1518,6 @@ declare global {
                         id: '88273927c9724c80b8f62927e4bd0da8'
                         key: {
                             name: 'u_klf_recordimporter_state'
-                        }
-                    },
-                    {
-                        table: 'sys_element_mapping'
-                        id: '88b7bc0fd6c845d5af62d842d671e9c1'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '70d80d8897b86550b2e1f97e6253afa0'
                         }
                     },
                     {
@@ -1935,15 +1593,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: '9502af034704121058ceeb02d16d4361'
-                        deleted: true
-                        key: {
-                            document_key: '5be127474704121058ceeb02d16d43c9'
-                            variable: '42f2564b73031300440211d8faf6a777'
-                        }
-                    },
-                    {
                         table: 'sys_ui_list'
                         id: '95aa603528b5417ba116a9ac5d91c93f'
                         key: {
@@ -1985,15 +1634,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: '9ff8ab144798961058ceeb02d16d4388'
-                        deleted: true
-                        key: {
-                            document_key: '901c6463478c521058ceeb02d16d436f'
-                            variable: '989d9e235324220002c6435723dc3484'
-                        }
-                    },
-                    {
                         table: 'sys_documentation'
                         id: 'a6cea4bab88341f89f075e51e7022674'
                         key: {
@@ -2031,14 +1671,6 @@ declare global {
                             }
                             element: 'u_scheduled_job_name'
                             position: '2'
-                        }
-                    },
-                    {
-                        table: 'sys_db_object'
-                        id: 'a95d65785ea84e9c8d46f331991367bb'
-                        deleted: true
-                        key: {
-                            name: 'sys_atf_test'
                         }
                     },
                     {
@@ -2098,15 +1730,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: 'adc95b8b47c0121058ceeb02d16d432f'
-                        deleted: true
-                        key: {
-                            document_key: '9fa9978b47c0121058ceeb02d16d437f'
-                            variable: '989d9e235324220002c6435723dc3484'
-                        }
-                    },
-                    {
                         table: 'sys_ui_element'
                         id: 'b34bc13cff46431020d2333663e97223'
                         key: {
@@ -2121,33 +1744,6 @@ declare global {
                             }
                             element: 'u_checkpoint'
                             position: '10'
-                        }
-                    },
-                    {
-                        table: 'sys_ui_element'
-                        id: 'b35128ed830143903c9299e0deaad3f3'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: 'u_data_manifest'
-                            position: '5'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: 'b70a6b6797202550b2e1f97e6253afb7'
-                        deleted: true
-                        key: {
-                            document_key: '3b0a6b6797202550b2e1f97e6253afb6'
-                            variable: '989d9e235324220002c6435723dc3484'
                         }
                     },
                     {
@@ -2174,34 +1770,6 @@ declare global {
                             }
                             element: 'u_force_transform_all'
                             position: '6'
-                        }
-                    },
-                    {
-                        table: 'sys_ui_element'
-                        id: 'b75128ed830143903c9299e0deaad3f0'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: '.split'
-                            position: '1'
-                        }
-                    },
-                    {
-                        table: 'sys_element_mapping'
-                        id: 'b76b9afe9f5a477bbb16991f2e4bf058'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '5cf3dfb447a4561058ceeb02d16d4393'
                         }
                     },
                     {
@@ -2241,16 +1809,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_element_mapping'
-                        id: 'b80630a6a0354cc7a78a917bd97a3186'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '648f584787209290e2041f8d3fbb35d1'
-                        }
-                    },
-                    {
                         table: 'sys_ui_element'
                         id: 'bb4bc13cff46431020d2333663e9721d'
                         key: {
@@ -2265,15 +1823,6 @@ declare global {
                             }
                             element: 'u_transaction_id'
                             position: '2'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: 'bc8edf8f47c0121058ceeb02d16d43b7'
-                        deleted: true
-                        key: {
-                            document_key: 'f87e5f034704121058ceeb02d16d432c'
-                            variable: '42f2564b73031300440211d8faf6a777'
                         }
                     },
                     {
@@ -2314,16 +1863,6 @@ declare global {
                         id: 'c9427f58bc754f6696b78451107698fb'
                         key: {
                             name: 'u_klf_recordimporter_state'
-                        }
-                    },
-                    {
-                        table: 'sys_element_mapping'
-                        id: 'ca7c0de937c14254809df4937fc6b4a2'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '78135f6b97ace150b2e1f97e6253af1a'
                         }
                     },
                     {
@@ -2390,16 +1929,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_element_mapping'
-                        id: 'd6713aa72fed4952a35a591a54cfaa64'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: 'aef63866474c121058ceeb02d16d4304'
-                        }
-                    },
-                    {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: 'dd07bdbd6f5346a9add7f56c7ea70a56'
                         key: {
@@ -2409,39 +1938,10 @@ declare global {
                     },
                     {
                         table: 'sys_dictionary'
-                        id: 'e0642c324670475a9a911ebd943b26ba'
-                        deleted: true
-                        key: {
-                            name: 'sys_atf_test'
-                            element: 'NULL'
-                        }
-                    },
-                    {
-                        table: 'sys_dictionary'
                         id: 'e18ee84dd39b469691bd9e5a49f63852'
                         key: {
                             name: 'u_klf_recordimporter_state'
                             element: 'u_logs'
-                        }
-                    },
-                    {
-                        table: 'sys_element_mapping'
-                        id: 'e31195fd6a484d228082b3cf57e27127'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '5381d20c4700121058ceeb02d16d4368'
-                        }
-                    },
-                    {
-                        table: 'sys_element_mapping'
-                        id: 'e3b2af045659489d9614594d805252e3'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '7f2497eb97ace150b2e1f97e6253af02'
                         }
                     },
                     {
@@ -2514,40 +2014,12 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_element_mapping'
-                        id: 'edab9ba32b1b4597b3458f37640cc47c'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '95c4368e833c36103c9299e0deaad3cc'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: 'edc9138b47c0121058ceeb02d16d43ec'
-                        deleted: true
-                        key: {
-                            document_key: '9fa9978b47c0121058ceeb02d16d437f'
-                            variable: '42f2564b73031300440211d8faf6a777'
-                        }
-                    },
-                    {
                         table: 'sys_documentation'
                         id: 'eeab76512d894dd2a080f80d3705bb79'
                         key: {
                             name: 'u_klf_recordimporter_state'
                             element: 'u_force_transform_all'
                             language: 'en'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: 'f0135f6b97ace150b2e1f97e6253af2e'
-                        deleted: true
-                        key: {
-                            document_key: 'f0135f6b97ace150b2e1f97e6253af2d'
-                            variable: '523c79985f30220012b44adb7f46663a'
                         }
                     },
                     {
@@ -2564,15 +2036,6 @@ declare global {
                         key: {
                             name: 'u_klf_recordimporter_state'
                             element: 'NULL'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: 'f30a6b6797202550b2e1f97e6253afb7'
-                        deleted: true
-                        key: {
-                            document_key: '3b0a6b6797202550b2e1f97e6253afb6'
-                            variable: '42f2564b73031300440211d8faf6a777'
                         }
                     },
                     {
@@ -2614,24 +2077,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: 'f5ab3ee047d8d61058ceeb02d16d43e8'
-                        deleted: true
-                        key: {
-                            document_key: '4c9b32e447d8d61058ceeb02d16d43a1'
-                            variable: '989d9e235324220002c6435723dc3484'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: 'f70d5bf297a42150b2e1f97e6253aff7'
-                        deleted: true
-                        key: {
-                            document_key: '938b5f3297a42150b2e1f97e6253af86'
-                            variable: '989d9e235324220002c6435723dc3484'
-                        }
-                    },
-                    {
                         table: 'sys_ui_element'
                         id: 'f74bc13cff46431020d2333663e97222'
                         key: {
@@ -2646,24 +2091,6 @@ declare global {
                             }
                             element: 'u_loaded_data'
                             position: '9'
-                        }
-                    },
-                    {
-                        table: 'sys_ui_element'
-                        id: 'f75128ed830143903c9299e0deaad3f2'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: 'u_loaded_data'
-                            position: '4'
                         }
                     },
                     {
@@ -2701,24 +2128,6 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_ui_element'
-                        id: 'fb5128ed830143903c9299e0deaad3ef'
-                        deleted: true
-                        key: {
-                            sys_ui_section: {
-                                id: '375128ed830143903c9299e0deaad3ad'
-                                key: {
-                                    name: 'u_klf_recordimporter_state'
-                                    caption: 'Import State'
-                                    view: 'Default view'
-                                    sys_domain: 'global'
-                                }
-                            }
-                            element: 'u_name'
-                            position: '0'
-                        }
-                    },
-                    {
                         table: 'sys_variable_value'
                         id: 'fb51f471a7b84be39845eb95c641b67e'
                         key: {
@@ -2749,39 +2158,11 @@ declare global {
                         }
                     },
                     {
-                        table: 'sys_variable_value'
-                        id: 'fdab3ee047d8d61058ceeb02d16d43e7'
-                        deleted: true
-                        key: {
-                            document_key: '4c9b32e447d8d61058ceeb02d16d43a1'
-                            variable: '42f2564b73031300440211d8faf6a777'
-                        }
-                    },
-                    {
-                        table: 'sys_element_mapping'
-                        id: 'fe869b3d1c8f41c79646181c0234c01a'
-                        deleted: true
-                        key: {
-                            field: 'script'
-                            table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
-                            id: '0af6bd134700521058ceeb02d16d43e7'
-                        }
-                    },
-                    {
                         table: 'sys_dictionary'
                         id: 'fedf24856f884489acc280fda50aa0cb'
                         key: {
                             name: 'u_klf_recordimporter_state'
                             element: 'u_loaded_data'
-                        }
-                    },
-                    {
-                        table: 'sys_variable_value'
-                        id: 'ff0d5bf297a42150b2e1f97e6253aff6'
-                        deleted: true
-                        key: {
-                            document_key: '938b5f3297a42150b2e1f97e6253af86'
-                            variable: '42f2564b73031300440211d8faf6a777'
                         }
                     },
                     {
