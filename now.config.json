@@ -1,5 +1,9 @@
 {
     "scope": "global",
     "scopeId": "fa03e59197682910b2e1f97e6253af92",
-    "name": "KLF Global"
+    "name": "KLF Global",
+    "accessControls": {
+        "runtimeAccessTracking": "none"
+    },
+    "jsLevel": "helsinki_es5"
 }

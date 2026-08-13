@@ -605,7 +605,7 @@ $sp-space--3xl: 40px !default;
 			margin: 0 0 0 15px;
 			line-height: initial;
 
-			&amp;:hover, &amp;:focus {
+			&:hover, &:focus {
 				text-decoration: none;
 			}
 		}

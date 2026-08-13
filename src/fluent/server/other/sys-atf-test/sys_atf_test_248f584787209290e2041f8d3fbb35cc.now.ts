@@ -14,11 +14,11 @@ Test(
         atf.server.runServerSideScript({
             $id: Now.ID['648f584787209290e2041f8d3fbb35d1'],
             description: 'Run Server Side Validation Script',
-            script: `KLF_TestJasmineMatchers(global);\r
-\r
-KLF_ScoperUtilsTest(outputs, steps, params, stepResult, assertEqual);\r
-\r
-jasmine.getEnv().execute();\r`,
+            script: `KLF_TestJasmineMatchers(global);
+
+KLF_ScoperUtilsTest(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();`,
         })
     }
 )

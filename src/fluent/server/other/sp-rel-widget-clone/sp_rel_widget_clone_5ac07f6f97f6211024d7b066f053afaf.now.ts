@@ -475,13 +475,13 @@ table {
   cursor: pointer;
   vertical-align: middle;
 
-  &amp;:nth-child(2) {
+  &:nth-child(2) {
     border-left: none;
   }
 
 
 
-  &amp;:last-child {
+  &:last-child {
     border-right: none;
   }
 }

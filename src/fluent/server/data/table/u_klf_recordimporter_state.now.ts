@@ -53,6 +53,16 @@ export const u_klf_recordimporter_state = Table({
             label: 'User Mapping',
             maxLength: 5000,
         }),
+        u_logs: StringColumn({
+            label: 'Logs',
+            maxLength: 10000,
+        }),
+        u_transaction_id: StringColumn({
+            label: 'Transaction ID',
+            maxLength: 32,
+            readOnly: true,
+            readOnlyOption: 'instance_configured',
+        }),
     },
     createAccessControls: true,
 })
