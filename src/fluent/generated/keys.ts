@@ -12,6 +12,7 @@ declare global {
                     '026910f6832a47903c9299e0deaad399': {
                         table: 'sys_script'
                         id: '026910f6832a47903c9299e0deaad399'
+                        deleted: true
                     }
                     '045dd71783fc03503c9299e0deaad3a8': {
                         table: 'sys_ws_operation'
