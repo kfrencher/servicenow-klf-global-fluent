@@ -116,6 +116,20 @@ global.KLF_RecordExporter = (function() {
          * @returns {KLF_TableInfo[]}
          */
         getTableInfo(options) {
+            // Validate that tables actually exist before attempting to query them
+            const invalidOptions = options.filter(option => {
+                if (!option.tableName) {
+                    return true;
+                }
+                var glideRecord = new GlideRecord(option.tableName);
+                return !glideRecord.isValid();
+            });
+
+            if (invalidOptions.length > 0) {
+                const invalidTableNames = invalidOptions.map(option => option.tableName || 'undefined');
+                throw new IllegalArgumentError('The following table names are invalid: "' + invalidTableNames.join(', ') + '" If these tables do not exist on the source instance, add these tables to the excludedTables list and try again.');
+            }
+
             return options.map(option => {
                 if (!option.tableName) {
                     throw new IllegalArgumentError('Table name is required for each option');

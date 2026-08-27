@@ -5,7 +5,7 @@ Form({
     view: default_view,
     sections: [
         {
-            caption: 'KLF_RecordImporter_State',
+            caption: '',
             content: [
                 {
                     layout: 'two-column',
@@ -47,10 +47,6 @@ Form({
                         },
                         {
                             field: 'u_loaded_data',
-                            type: 'table_field',
-                        },
-                        {
-                            field: 'u_loaded_data_json',
                             type: 'table_field',
                         },
                         {

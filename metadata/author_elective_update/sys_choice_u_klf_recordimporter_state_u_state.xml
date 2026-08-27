@@ -9,13 +9,53 @@
             <sys_id>0590a4a9830143903c9299e0deaad320</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_name>u_state</sys_name>
-            <sys_package display_value="KLF Global" source="global">fa03e59197682910b2e1f97e6253af92</sys_package>
+            <sys_package display_value="KLF Global" source="fa03e59197682910b2e1f97e6253af92">fa03e59197682910b2e1f97e6253af92</sys_package>
             <sys_policy/>
             <sys_scope display_value="KLF Global">fa03e59197682910b2e1f97e6253af92</sys_scope>
             <sys_update_name>sys_choice_u_klf_recordimporter_state_u_state</sys_update_name>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-05-24 00:28:18</sys_updated_on>
         </sys_choice_set>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_state</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Cancelled</label>
+            <language>en</language>
+            <name>u_klf_recordimporter_state</name>
+            <sequence/>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-07-11 15:26:51</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>7ea88bf3837ac7103c9299e0deaad389</sys_id>
+            <sys_mod_count>1</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-07-11 15:26:53</sys_updated_on>
+            <value>cancelled</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>u_state</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>Cancelling</label>
+            <language>en</language>
+            <name>u_klf_recordimporter_state</name>
+            <sequence/>
+            <synonyms/>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-07-11 15:26:55</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>07a88bf3837ac7103c9299e0deaad38b</sys_id>
+            <sys_mod_count>1</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-07-11 15:26:58</sys_updated_on>
+            <value>cancelling</value>
+        </sys_choice>
         <sys_choice action="INSERT_OR_UPDATE">
             <dependent_value/>
             <element>u_state</element>
@@ -30,7 +70,7 @@
             <sys_created_on>2026-05-24 00:28:25</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>211b0e4783f147103c9299e0deaad3e1</sys_id>
+            <sys_id>cba88bf3837ac7103c9299e0deaad38c</sys_id>
             <sys_mod_count>1</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-05-24 00:28:28</sys_updated_on>
@@ -50,7 +90,7 @@
             <sys_created_on>2026-07-04 20:10:19</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>e51b0e4783f147103c9299e0deaad3e3</sys_id>
+            <sys_id>83a88bf3837ac7103c9299e0deaad38e</sys_id>
             <sys_mod_count>1</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-07-04 20:10:20</sys_updated_on>
@@ -70,7 +110,7 @@
             <sys_created_on>2026-05-24 00:28:18</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>ad1b0e4783f147103c9299e0deaad3e4</sys_id>
+            <sys_id>4ba88bf3837ac7103c9299e0deaad38f</sys_id>
             <sys_mod_count>1</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-05-24 00:28:20</sys_updated_on>
@@ -90,7 +130,7 @@
             <sys_created_on>2026-07-04 20:10:28</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>651b0e4783f147103c9299e0deaad3e6</sys_id>
+            <sys_id>03a88bf3837ac7103c9299e0deaad391</sys_id>
             <sys_mod_count>1</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-07-04 20:10:30</sys_updated_on>

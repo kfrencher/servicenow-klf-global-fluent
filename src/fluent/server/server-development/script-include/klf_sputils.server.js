@@ -68,7 +68,7 @@ KLF_SPUtils.prototype = {
     /**
      * substitute call for $sp.getStream. For some reason $sp.getStream was returning a
      * NullPointerException in Rome, so I replaced it with an equivalent call. This is used
-     * in the snb-ticket-conversation widget
+     * in the klf-ticket-conversation widget
      * @param {string} tableName
      * @param {string} sysId
      * @returns {Object}

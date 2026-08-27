@@ -7,8 +7,8 @@ SPWidget({
     serverScript: Now.include('./sp_widget_klf_form/server_script.js'),
     htmlTemplate: Now.include('./sp_widget_klf_form/template.html'),
     customCss: Now.include('./sp_widget_klf_form/style.scss'),
-    description: `This form is cloned from the "form" widget.
-
+    description: `This form is cloned from the "form" widget.\r
+\r
 Refer to comments in the "Server script" field for details on customizations.`,
     id: 'klf_form',
     linkScript: Now.include('./sp_widget_klf_form/link-script.js'),

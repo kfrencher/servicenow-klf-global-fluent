@@ -21,6 +21,7 @@
  * @property {boolean} hasMissingUsers true if there are missing users
  * @property {string[]} missingUsers The sys_ids of the users that do not exist in the remote system
  * @property {{[localUserSysId:string]:string}} mapping The mapping of the sys_ids of the users that exist in the local system to the remote system
+ * @property {{[localUserSysId:string]:string}} [usernameMapping]
  * @property {string} [error] There error message if success is false
  */
 
