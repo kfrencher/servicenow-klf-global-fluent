@@ -312,8 +312,8 @@ global.KLF_MigratorUtils = KLF_MigratorUtils;
                 }
             },
             connectionConfig,
-            userMapping,
-            groupMapping
+            groupMapping,
+            userMapping
         );
 
         // Sync the table from the source instance to the target instance

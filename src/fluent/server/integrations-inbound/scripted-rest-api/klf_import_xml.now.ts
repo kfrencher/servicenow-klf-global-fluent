@@ -212,7 +212,6 @@ RestApi({
                 },
             ],
             version: 1,
-            consumes: 'application/json',
         },
         {
             $id: Now.ID['6a3c34b347f7821058ceeb02d16d438e'],
