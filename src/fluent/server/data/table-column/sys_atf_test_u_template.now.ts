@@ -5,6 +5,7 @@ export const sys_atf_test = Table({
     schema: {
         u_template: BooleanColumn({
             label: 'Template',
+            maxLength: 40,
         }),
     },
 })

@@ -8,4 +8,7 @@ BusinessRule({
     action: ['update', 'insert'],
     filterCondition: 'u_scheduled_job_nameVALCHANGES^EQ',
     script: Now.include('./klfstate_onupdate.server.js'),
+    $meta: {
+        useEsLatest: true,
+    },
 })

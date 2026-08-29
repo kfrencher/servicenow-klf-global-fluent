@@ -7,4 +7,7 @@ ScriptAction({
     active: true,
     script: `global.KLF_RecordImporter.logInfo('Linking record to attachment');
 global.KLF_RecordImporter.handleLinkAttachment(current, event.parm1, event.parm2);`,
+    $meta: {
+        useEsLatest: true,
+    },
 })

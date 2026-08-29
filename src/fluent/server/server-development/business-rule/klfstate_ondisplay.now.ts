@@ -7,4 +7,7 @@ BusinessRule({
     when: 'display',
     action: [],
     script: Now.include('./klfstate_ondisplay.server.js'),
+    $meta: {
+        useEsLatest: true,
+    },
 })

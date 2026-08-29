@@ -23,4 +23,7 @@ KLF_RecordImporter.executeJob(current);
 action.setRedirectURL(current);`,
     showUpdate: true,
     showInsert: true,
+    $meta: {
+        useEsLatest: true,
+    },
 })

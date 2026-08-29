@@ -9,4 +9,7 @@ SPWidget({
     id: 'klf_test_execute_action',
     linkScript: Now.include('./sp_widget_klf_test_execute_action/link-script.js'),
     angularProviders: ['cf2feedeff52321020d2333663e97267'],
+    $meta: {
+        useEsLatest: true,
+    },
 })

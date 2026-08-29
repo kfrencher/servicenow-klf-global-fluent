@@ -4,25 +4,22 @@ UiPage({
     $id: Now.ID['706c176797ece150b2e1f97e6253af97'],
     category: 'general',
     endpoint: 'klf_add_steps_from_test_modal.do',
-    html: `<?xml version="1.0" encoding="utf-8" ?>
+    html: `<?xml version="1.0" encoding="utf-8"?>
 <j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
-	<g:ui_form>
-		<input type="hidden" name="sys_package" value="\${sysparm_sys_package}"/>
-		<input type="hidden" name="test_target_sys_id" value="\${sysparm_to_test_sys_id}"/>
-		<p>Select test to add steps from</p>
-		<div style="margin: 15px 0">
-			<!-- 
+  <g:ui_form>
+    <input type="hidden" name="sys_package" value="\${sysparm_sys_package}"></input>
+    <input type="hidden" name="test_target_sys_id" value="\${sysparm_to_test_sys_id}"></input>
+    <p>Select test to add steps from</p>
+    <div style="margin: 15px 0">
+      <!-- 
 				Constrain to tests in the current application scope and exclude the current test from the list 
 				Only show tests with names that start with template
 				Order by name
 			-->
-			<g:macro_invoke macro="ui_reference" name="test_source_sys_id" 
-							table="sys_atf_test" show_popup="true" 
-							show_lookup="true" 
-							query="sys_package=\${sysparm_sys_package}^sys_id!=\${sysparm_to_test_sys_id}^u_template=true^ORDERBYname"/>
-		</div>
-		<g:dialog_buttons_ok_cancel ok="return true" />
-	</g:ui_form>
+      <g:macro_invoke macro="ui_reference" name="test_source_sys_id" table="sys_atf_test" show_popup="true" show_lookup="true" query="sys_package=\${sysparm_sys_package}^sys_id!=\${sysparm_to_test_sys_id}^u_template=true^ORDERBYname"></g:macro_invoke>
+    </div>
+    <g:dialog_buttons_ok_cancel ok="return true"></g:dialog_buttons_ok_cancel>
+  </g:ui_form>
 </j:jelly>`,
     processingScript: `if(sys_package != gs.getCurrentApplicationId()) {
 	gs.addErrorMessage('You must be in the same scope as the test to add steps');

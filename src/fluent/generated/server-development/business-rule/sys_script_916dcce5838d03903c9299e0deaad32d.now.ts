@@ -7,4 +7,7 @@ BusinessRule({
     when: 'before',
     action: ['update', 'insert'],
     script: Now.include('./sys_script_916dcce5838d03903c9299e0deaad32d.server.js'),
+    $meta: {
+        useEsLatest: true,
+    },
 })

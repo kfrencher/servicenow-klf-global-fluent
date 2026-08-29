@@ -25,10 +25,10 @@ function factory($q, spUtil, $http, $uibModal, i18n, $document, $timeout, $uibMo
             <div class="form-group"><label for="xpInput" ng-if="options.label">
                 <span class="field-decorations"><span class="fa fa-asterisk mandatory" title="Required" style="padding-right: .25em"></span>{{options.label}}</span></label>
                 <input sn-atf-id="klf-modal-text" id="xpInput" type="text" class="form-control" ng-model="input.value" required="true" ng-change="changed=true" ng-blur="clearFocusListCache()" 
-                ng-if="!options.values || options.values.length === 0" autocomplete="off" aria-invalid="{{(changed == true &amp;&amp; form.xpForm.$invalid) || false}}"></input>
+                ng-if="!options.values || options.values.length === 0" autocomplete="off" aria-invalid="{{(changed == true && form.xpForm.$invalid) || false}}"></input>
                 <div class="input-group" ng-if="options.values"><input id="xpInput" type="text" class="form-control" ng-model="input.value" 
                     required="true" ng-change="changed=true" ng-blur="clearFocusListCache()" autocomplete="off" 
-                    aria-invalid="{{(changed == true &amp;&amp; form.xpForm.$invalid) || false}}"></input>
+                    aria-invalid="{{(changed == true && form.xpForm.$invalid) || false}}"></input>
                     <div class="input-group-btn" dropdown="true"><button type="button" class="btn btn-default dropdown-toggle" 
                         dropdown-toggle="true" data-toggle="dropdown"><span class="caret"></span></button>
                         <ul class="dropdown-menu pull-right">
@@ -42,7 +42,7 @@ function factory($q, spUtil, $http, $uibModal, i18n, $document, $timeout, $uibMo
 </div>
 <div class="modal-footer" ng-style="options.footerStyle">
     <button ng-repeat="button in options.buttons track by button.label" sp-focus-if="button.focus" 
-    ng-disabled="button.primary &amp;&amp; options.input &amp;&amp; form.xpForm.$invalid" class="btn btn-default {{button.class}}"
+    ng-disabled="button.primary && options.input && form.xpForm.$invalid" class="btn btn-default {{button.class}}"
     ng-class="{'btn-primary':button.primary}" type="button" ng-click="buttonClicked(button)" sn-atf-id="klf-button-{{button.label}}">{{button.label}}</button>
 </div>\`;
 

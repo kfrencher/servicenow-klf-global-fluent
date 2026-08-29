@@ -16,4 +16,7 @@ UiAction({
     messages: [],
     showUpdate: true,
     showInsert: true,
+    $meta: {
+        useEsLatest: true,
+    },
 })

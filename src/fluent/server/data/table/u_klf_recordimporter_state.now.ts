@@ -16,6 +16,7 @@ export const u_klf_recordimporter_state = Table({
         u_force_transform_all: BooleanColumn({
             default: false,
             label: 'Force Transform All',
+            maxLength: 40,
         }),
         u_group_mapping: StringColumn({
             label: 'Group Mapping',
@@ -44,6 +45,7 @@ export const u_klf_recordimporter_state = Table({
         u_state: StringColumn({
             dropdown: 'dropdown_with_none',
             label: 'State',
+            maxLength: 40,
         }),
         u_transform_position: StringColumn({
             label: 'Transform Position',
@@ -65,4 +67,13 @@ export const u_klf_recordimporter_state = Table({
         }),
     },
     createAccessControls: true,
+    actions: {
+        read: true,
+        update: false,
+        delete: false,
+        create: false,
+    },
+    allowClientScripts: false,
+    allowNewFields: false,
+    allowUiActions: false,
 })

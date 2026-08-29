@@ -14,10 +14,10 @@ Test(
             $id: Now.ID['0af6bd134700521058ceeb02d16d43e7'],
             description: 'Run Server Side Validation Script',
             notes: 'KLF_RecordSync_UserUtilsTest',
-            script: `KLF_TestJasmineMatchers(global);\r
-\r
-KLF_RecordSync_UserUtilsTest(outputs, steps, params, stepResult, assertEqual);\r
-\r
+            script: `KLF_TestJasmineMatchers(global);
+
+KLF_RecordSync_UserUtilsTest(outputs, steps, params, stepResult, assertEqual);
+
 jasmine.getEnv().execute();`,
         })
     }

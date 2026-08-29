@@ -22,4 +22,7 @@ UiAction({
 action.setRedirectURL(current);`,
     showUpdate: true,
     showInsert: true,
+    $meta: {
+        useEsLatest: true,
+    },
 })

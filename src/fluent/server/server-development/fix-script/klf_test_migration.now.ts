@@ -90,5 +90,6 @@ Record({
     transferData();
 })();`,
         unloadable: false,
+        sys_name: 'KLF Test Migration',
     },
 })

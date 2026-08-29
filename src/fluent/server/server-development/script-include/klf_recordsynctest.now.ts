@@ -10,4 +10,7 @@ ScriptInclude({
     sandboxCallable: false,
     accessibleFrom: 'public',
     active: true,
+    $meta: {
+        useEsLatest: false,
+    },
 })
