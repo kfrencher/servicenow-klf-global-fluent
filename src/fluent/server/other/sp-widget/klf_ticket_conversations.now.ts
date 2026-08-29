@@ -65,6 +65,6 @@ SPWidget({
         },
     ],
     $meta: {
-        useEsLatest: false,
+        useEsLatest: true,
     },
 })

@@ -10,6 +10,6 @@ ScriptInclude({
     sandboxCallable: false,
     active: true,
     $meta: {
-        useEsLatest: false,
+        useEsLatest: true,
     },
 })

@@ -11,6 +11,6 @@ ScriptInclude({
     accessibleFrom: 'public',
     active: true,
     $meta: {
-        useEsLatest: false,
+        useEsLatest: true,
     },
 })
