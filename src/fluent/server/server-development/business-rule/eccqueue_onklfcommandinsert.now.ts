@@ -8,4 +8,7 @@ BusinessRule({
     action: ['update', 'insert'],
     filterCondition: 'source=KLF_CommandProbe^stateCHANGESTOready^queue=input^EQ',
     script: Now.include('./eccqueue_onklfcommandinsert.server.js'),
+    $meta: {
+        useEsLatest: true,
+    },
 })

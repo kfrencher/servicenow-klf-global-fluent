@@ -9,4 +9,7 @@ ScriptInclude({
     mobileCallable: false,
     sandboxCallable: false,
     active: true,
+    $meta: {
+        useEsLatest: true,
+    },
 })
