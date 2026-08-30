@@ -43,28 +43,28 @@ Form({
                     elements: [
                         {
                             field: 'u_data_manifest',
-                            type: 'table_field',
+                            type: 'table_field'
                         },
                         {
                             field: 'u_loaded_data',
-                            type: 'table_field',
+                            type: 'table_field'
                         },
                         {
                             field: 'u_checkpoint',
-                            type: 'table_field',
+                            type: 'table_field'
                         },
                         {
                             field: 'u_user_mapping',
-                            type: 'table_field',
+                            type: 'table_field'
                         },
                         {
                             field: 'u_group_mapping',
-                            type: 'table_field',
+                            type: 'table_field'
                         },
                         {
                             field: 'u_logs',
-                            type: 'table_field',
-                        },
+                            type: 'table_field'
+                        }
                     ],
                 },
             ],
