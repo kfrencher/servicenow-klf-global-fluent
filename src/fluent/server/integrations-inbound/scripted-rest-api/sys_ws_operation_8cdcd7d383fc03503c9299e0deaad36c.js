@@ -9,7 +9,7 @@
 	const {tableName, filter} = request.body.data;
 
 	const userUtils = new global.KLF_RecordSync_UserUtils(emptyConnectionConfig);
-	const userSysIds = userUtils.getUniqueGroupsInTable(tableName, filter);
+	const userSysIds = userUtils.getUniqueUsersInTable(tableName, filter);
 
 	if(userSysIds.length > 0) {
 		return userUtils.getRemoteUsersBySysIds(userSysIds);
@@ -18,4 +18,4 @@
 	}
 	
 
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

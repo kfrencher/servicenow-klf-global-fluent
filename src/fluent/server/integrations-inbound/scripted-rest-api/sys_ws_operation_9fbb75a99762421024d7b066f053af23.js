@@ -10,8 +10,7 @@
     var groups = JSON.parse(bodyJSON);
     var groupMapping = global.KLF_RecordSync_GroupUtils.createMappingFromRemote(groups);
 
-    response.setStatus('200');
+    response.setStatus(200);
     response.setBody(groupMapping);
 
-// @ts-ignore
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

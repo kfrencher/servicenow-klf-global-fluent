@@ -214,9 +214,12 @@
 		var elements = grForMetaData.getElements();
 		// Global and scoped GlideRecord.getElements return two different things,
 		// so convert to Array if needed before looping through
+		// @ts-ignore
 		if (typeof elements.size != "undefined") {
 			var elementArr = [];
+		// @ts-ignore
 			for (var i = 0; i < elements.size(); i++)
+			// @ts-ignore
 				elementArr.push(elements.get(i));
 			elements = elementArr;
 		}

@@ -18,4 +18,4 @@
 	}
 	
 
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

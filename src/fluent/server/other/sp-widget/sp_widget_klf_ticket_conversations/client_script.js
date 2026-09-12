@@ -10,6 +10,7 @@ function spTicketConversation($scope, nowAttachmentHandler, $animate, $rootScope
     $scope.msg = "";
     $scope.isNative = cabrillo.isNative();
     $scope.errorMessages = [];
+    // @ts-ignore
     var dateFormat = window.NOW.dateFormat;
     var hasTimeZone = g_user_date_time_format.indexOf('z') > -1;
     $scope.showDate = !hasTimeZone && (dateFormat.dateBoth || !dateFormat.timeAgo);
@@ -182,10 +183,10 @@ function spTicketConversation($scope, nowAttachmentHandler, $animate, $rootScope
         $scope.typing = [];
         var liveMessages = [];
         var tempTypingUsers = [];
-        Object.keys(sessions).forEach(function(session) {
-            var journalFields = scope.data.stream.journal_fields;
+        Object.keys(sessions).forEach(function(sessionKey) {
+            var journalFields = $scope.data.stream.journal_fields;
             var canUserReadJournalField = false;
-            session = sessions[session];
+            var session = sessions[sessionKey];
 
             for (var j = 0; j < journalFields.length; j++) {
                 if (journalFields[j].name === session.field_type) {

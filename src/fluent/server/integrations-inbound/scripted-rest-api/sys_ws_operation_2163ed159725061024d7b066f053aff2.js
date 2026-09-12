@@ -21,18 +21,17 @@
 
 	if(xml.length > 0) {
 		global.KLF_RecordSync.loadRecordByGlideUpdateManager2(xml.join('\n'));
-		response.setStatus('200');
+		response.setStatus(200);
 		response.setBody({
 			success: true,
 			message: 'Records processed'
 		});
 	} else {
-		response.setStatus('400');
+		response.setStatus(400);
 		response.setBody({
 			success: false,
 			message: 'An XML document is required in the request body'
 		});
 	}
 
-// @ts-ignore
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

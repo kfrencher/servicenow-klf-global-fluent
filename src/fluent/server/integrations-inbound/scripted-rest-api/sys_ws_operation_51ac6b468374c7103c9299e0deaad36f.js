@@ -3,4 +3,4 @@
     const requestBody = request.body.data;
 	response.setBody(new global.KLF_RecordExporter().exportTable(requestBody));
 
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

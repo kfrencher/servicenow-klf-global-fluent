@@ -14,5 +14,4 @@
 	response.setBody({
 		success: true
 	});
-// @ts-ignore
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

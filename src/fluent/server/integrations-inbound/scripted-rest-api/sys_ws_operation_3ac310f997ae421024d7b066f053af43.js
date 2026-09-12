@@ -12,8 +12,7 @@
     var result =
         global.KLF_RecordSync_GroupUtils.updateNotifications(updateNotificationsRequest.groupMapping, updateNotificationsRequest.notificationSysIds);
 
-    response.setStatus('200');
+    response.setStatus(200);
     response.setBody(result);
 
-// @ts-ignore
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

@@ -93,7 +93,7 @@
 
     if (input) { // if we have input then we're saving
         if (input.isPosting && input.journalEntry && input.journalEntryField) {
-            if (gr.canWrite(input.journalEntryField)) {
+            if (gr.canWrite()) {
                 gr[input.journalEntryField].setDisplayValue(input.journalEntry);
                 gr.update();
                 $sp.logStat('Comments', data.table, data.sys_id, input.journalEntry);

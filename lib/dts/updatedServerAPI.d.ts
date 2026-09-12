@@ -1,3 +1,5 @@
+declare var request: unknown;
+declare var response: unknown;
 declare var $: any;
 declare var sn_dt_api: any;
 declare var current: GlideRecord;
@@ -13,10 +15,11 @@ declare var action: SN_UI_Action;
 declare var answer: boolean;
 declare var AnswerUtils: any;
 declare var GwtMessage: any;
-declare var FilteredGlideRecord: GlideRecord;
 declare var GlideRelationship: any;
 declare var GlideStringUtil: any;
 declare var sn_assessment_core: any;
+
+declare class FilteredGlideRecord extends GlideRecord {}
 
 declare class GlideChoice {
     constructor(value: string, label: string);
@@ -99,6 +102,13 @@ interface SPAction {
 
 interface AngularScope extends angular.IScope {
     [key: string]: any;
+}
+
+interface JQueryStatic {
+    (
+        html: string,
+        attributes: Record<string, string | number | boolean | null | undefined>
+    ): JQLite;
 }
 
 interface SN_UI_Action {
@@ -612,6 +622,7 @@ declare class GlideElementDescriptor {
     getLength(): number;
     /** Returns the field attribute as a boolean */
     getBooleanAttribute(attributeName: string): boolean;
+    getFirstTableName(): string;
 }
 /** Scoped GlideRecord is used for database operations instead of writing SQL queries. Provides data access APIs to retrieve, update, and delete records from a table */
 declare class GlideRecord {
@@ -1432,6 +1443,7 @@ declare class RESTAPIRequest {
 }
 /** Allows you to access the request body as a stream, as a string, de-serialized into an object, or as an array of obects */
 declare class RESTAPIRequestBody {
+    data: any;
     constructor();
     /** The body of the request as a stream. Note, this object provides no functions to manipulate the stream from script. Rather this object can be passed to another API which takes an InputStream as an input parameter */
     dataStream: dataStream;

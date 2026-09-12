@@ -8,4 +8,4 @@
 
 	return {success: true, mapping: gs.getUser().getPreference(scopeName)};
 
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

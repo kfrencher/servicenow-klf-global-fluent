@@ -8,4 +8,4 @@
 
 	response.setBody(new global.KLF_RecordExporter().getTableInfo(data));
 
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

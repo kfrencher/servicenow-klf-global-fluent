@@ -11,6 +11,7 @@
         "lib/dts/klf.js"
     ],
     "compilerOptions": {
+        "types": ["angular","jasmine","chance"],
         "module": "CommonJS",
         "target": "es2020",
         "allowJs": true,

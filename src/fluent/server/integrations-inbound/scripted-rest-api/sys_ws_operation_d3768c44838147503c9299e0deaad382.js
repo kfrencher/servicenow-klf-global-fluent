@@ -14,4 +14,4 @@
 
 	return {success: true};
 
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

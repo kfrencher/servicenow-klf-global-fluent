@@ -1,4 +1,6 @@
 function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, $timeout, spNavStateManager, i18n) {
+    /** @type {this & {data: any}} */
+    // @ts-ignore
     var c = this;
     /*
      * options:

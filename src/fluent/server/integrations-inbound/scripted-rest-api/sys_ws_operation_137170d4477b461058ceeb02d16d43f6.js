@@ -10,8 +10,7 @@
     var users = JSON.parse(bodyJSON);
     var userMapping = global.KLF_RecordSync_UserUtils.createMappingFromRemote(users);
 
-    response.setStatus('200');
+    response.setStatus(200);
     response.setBody(userMapping);
 
-// @ts-ignore
-})(request, response);
+})(/** @type {RESTAPIRequest} */ (request), /** @type {RESTAPIResponse} */ (response));

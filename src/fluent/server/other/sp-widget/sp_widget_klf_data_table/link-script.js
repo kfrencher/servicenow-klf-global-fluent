@@ -9,6 +9,7 @@ function link(scope, element, attrs, ctrl){
 		if (e.ctrlKey)
 			return; // ctrlKey is for the debug menu, not this menu
 
+		/** @type {any} */
 		var rowScope = angular.element(e.target).scope();
 		var field, item, fieldVal;
 
