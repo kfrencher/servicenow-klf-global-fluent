@@ -12,9 +12,7 @@ UiAction({
         isUi11Compatible: true,
     },
     workspace: {
-        clientScriptV2: `function onClick(g_form) {
-
-}`,
+        clientScriptV2: '',
     },
     messages: [],
     condition: Now.include('klf_ri_state_stop_data_load.condition.server.js'),

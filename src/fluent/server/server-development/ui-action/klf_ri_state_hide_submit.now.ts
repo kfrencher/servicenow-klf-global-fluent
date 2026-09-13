@@ -9,9 +9,7 @@ UiAction({
         isUi11Compatible: true,
     },
     workspace: {
-        clientScriptV2: `function onClick(g_form) {
-
-}`,
+        clientScriptV2: '',
     },
     messages: [],
     showUpdate: true,

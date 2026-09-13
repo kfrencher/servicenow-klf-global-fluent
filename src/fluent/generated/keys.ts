@@ -520,7 +520,7 @@ declare global {
                     '916dcce5838d03903c9299e0deaad32d': {
                         table: 'sys_script'
                         id: '916dcce5838d03903c9299e0deaad32d'
-                        deleted: false
+                        deleted: true
                     }
                     '92c07f6f97f6211024d7b066f053afaa': {
                         table: 'sp_widget'
@@ -4204,6 +4204,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'd8ed0829838d03903c9299e0deaad368'
+                        deleted: true
                         key: {
                             id: '916dcce5838d03903c9299e0deaad32d'
                             table: 'sys_script'

@@ -67,8 +67,8 @@ Record({
                 }
             },
             connectionConfig,
-            userMapping,
-            groupMapping
+            groupMapping,
+            userMapping
         );
 
         var record = new GlideRecord('u_klf_test_task');

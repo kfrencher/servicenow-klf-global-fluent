@@ -93,8 +93,8 @@ global.KLF_CommandProbe.prototype = {
     /**
      * Adds a parameter to the payload that can be retrieved by a mid server
      * script include using 
-     * @param {XMLDocument} payloadDoc
-     * @param {HTMLElement} parametersElement
+     * @param {Document} payloadDoc
+     * @param {Node} parametersElement
      * @param {string} name 
      * @param {string} value 
      */
