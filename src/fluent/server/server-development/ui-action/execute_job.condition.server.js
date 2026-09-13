@@ -1,0 +1,1 @@
+global.KLF_RecordImporter.showExecuteJob(current);
