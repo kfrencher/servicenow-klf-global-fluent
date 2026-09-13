@@ -1,4 +1,4 @@
-import { RestApi } from '@servicenow/sdk/core'
+import { Record, RestApi } from '@servicenow/sdk/core'
 
 RestApi({
     $id: Now.ID['7323a9159725061024d7b066f053af7c'],
@@ -12,7 +12,7 @@ RestApi({
             name: 'User Mapping',
             consumes: 'application/json',
             method: 'POST',
-            script: Now.include('./sys_ws_operation_137170d4477b461058ceeb02d16d43f6.js'),
+            script: Now.include('./klf_import_xml.user_mapping.server.js'),
             produces: 'application/json',
             path: '/user_mapping',
             shortDescription: 'Creates a group mapping based on the provided list of groups',
@@ -80,7 +80,7 @@ RestApi({
             name: 'Import',
             consumes: 'application/xml',
             method: 'POST',
-            script: Now.include('./sys_ws_operation_2163ed159725061024d7b066f053aff2.js'),
+            script: Now.include('./klf_import_xml.import.server.js'),
             produces: 'application/json',
             shortDescription: 'Imports records using the same format as export XML',
             requestExample: `<?xml version="1.0" encoding="UTF-8"?>
@@ -191,7 +191,7 @@ RestApi({
             name: 'Notifications',
             consumes: 'application/json',
             method: 'POST',
-            script: Now.include('./sys_ws_operation_3ac310f997ae421024d7b066f053af43.js'),
+            script: Now.include('./klf_import_xml.notifications.server.js'),
             produces: 'application/json',
             path: '/notifications',
             version: 1,
@@ -199,7 +199,7 @@ RestApi({
         {
             $id: Now.ID['655beaab47fb421058ceeb02d16d4341'],
             name: 'Roles',
-            script: Now.include('./sys_ws_operation_655beaab47fb421058ceeb02d16d4341.js'),
+            script: Now.include('./klf_import_xml.roles.get.server.js'),
             produces: 'application/json',
             path: '/roles',
             parameters: [
@@ -219,7 +219,7 @@ RestApi({
             name: 'Roles',
             consumes: 'application/json',
             method: 'POST',
-            script: Now.include('./sys_ws_operation_6a3c34b347f7821058ceeb02d16d438e.js'),
+            script: Now.include('./klf_import_xml.roles.post.server.js'),
             produces: 'application/json',
             path: '/roles',
             version: 1,
@@ -229,7 +229,7 @@ RestApi({
             name: 'Group Mapping',
             consumes: 'application/json',
             method: 'POST',
-            script: Now.include('./sys_ws_operation_9fbb75a99762421024d7b066f053af23.js'),
+            script: Now.include('./klf_import_xml.group_mapping.server.js'),
             produces: 'application/json',
             path: '/group_mapping',
             shortDescription: 'Creates a group mapping based on the provided list of groups',
@@ -297,7 +297,7 @@ RestApi({
             name: 'Validate Manifest',
             consumes: 'application/json',
             method: 'POST',
-            script: Now.include('./sys_ws_operation_c42a90ab971eca1424d7b066f053af2f.js'),
+            script: Now.include('./klf_import_xml.validate_manifest.server.js'),
             produces: 'application/json',
             path: '/validate_manifest',
             shortDescription: 'Validates that the records in the provided manifest exist in the local instance',
@@ -337,4 +337,40 @@ RestApi({
             version: 1,
         },
     ],
+})
+
+Record({
+    $id: Now.ID['klf-import-xml-user-mapping-es-latest'],
+    table: 'sys_es_latest_script',
+    data: { id: '137170d4477b461058ceeb02d16d43f6', table: 'sys_ws_operation', use_es_latest: 'true' },
+})
+Record({
+    $id: Now.ID['klf-import-xml-import-es-latest'],
+    table: 'sys_es_latest_script',
+    data: { id: '2163ed159725061024d7b066f053aff2', table: 'sys_ws_operation', use_es_latest: 'true' },
+})
+Record({
+    $id: Now.ID['655b6e6f47bb421058ceeb02d16d4316'],
+    table: 'sys_es_latest_script',
+    data: { id: '3ac310f997ae421024d7b066f053af43', table: 'sys_ws_operation', use_es_latest: 'true' },
+})
+Record({
+    $id: Now.ID['dafcaa2747fb421058ceeb02d16d43b3'],
+    table: 'sys_es_latest_script',
+    data: { id: '655beaab47fb421058ceeb02d16d4341', table: 'sys_ws_operation', use_es_latest: 'true' },
+})
+Record({
+    $id: Now.ID['3dbff8f347f7821058ceeb02d16d43ee'],
+    table: 'sys_es_latest_script',
+    data: { id: '6a3c34b347f7821058ceeb02d16d438e', table: 'sys_ws_operation', use_es_latest: 'true' },
+})
+Record({
+    $id: Now.ID['klf-import-xml-group-mapping-es-latest'],
+    table: 'sys_es_latest_script',
+    data: { id: '9fbb75a99762421024d7b066f053af23', table: 'sys_ws_operation', use_es_latest: 'true' },
+})
+Record({
+    $id: Now.ID['klf-import-xml-validate-manifest-es-latest'],
+    table: 'sys_es_latest_script',
+    data: { id: 'c42a90ab971eca1424d7b066f053af2f', table: 'sys_ws_operation', use_es_latest: 'true' },
 })

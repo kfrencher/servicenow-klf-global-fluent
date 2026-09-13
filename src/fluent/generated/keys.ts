@@ -1216,6 +1216,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: '1f7d971783fc03503c9299e0deaad39a'
+                        deleted: false
                         key: {
                             id: '045dd71783fc03503c9299e0deaad3a8'
                             table: 'sys_ws_operation'
@@ -1293,6 +1294,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: '214dd3d783b803503c9299e0deaad382'
+                        deleted: false
                         key: {
                             id: '8cdcd7d383fc03503c9299e0deaad36c'
                             table: 'sys_ws_operation'
@@ -1371,6 +1373,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: '258072d483850b503c9299e0deaad35b'
+                        deleted: false
                         key: {
                             id: '75207e9483850b503c9299e0deaad353'
                             table: 'sys_ws_operation'
@@ -1627,6 +1630,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: '34f95b4783fc8f103c9299e0deaad3dd'
+                        deleted: false
                         key: {
                             id: '46c75fc783fc8f103c9299e0deaad3e0'
                             table: 'sys_ws_operation'
@@ -1823,6 +1827,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: '3dbff8f347f7821058ceeb02d16d43ee'
+                        deleted: false
                         key: {
                             id: '6a3c34b347f7821058ceeb02d16d438e'
                             table: 'sys_ws_operation'
@@ -2083,6 +2088,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_es_latest_script'
+                        id: '51f3ba0594e24ca598a8c4d35bebf1d9'
+                        key: {
+                            id: '9fbb75a99762421024d7b066f053af23'
+                            table: 'sys_ws_operation'
+                        }
+                    },
+                    {
                         table: 'sys_choice'
                         id: '532c84bb54e5445d8fd537d69fcdbca5'
                         deleted: true
@@ -2126,6 +2139,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: '593739d04710961058ceeb02d16d4357'
+                        deleted: false
                         key: {
                             id: '13d6f1984710961058ceeb02d16d4396'
                             table: 'sys_ws_operation'
@@ -2333,6 +2347,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: '655b6e6f47bb421058ceeb02d16d4316'
+                        deleted: false
                         key: {
                             id: '3ac310f997ae421024d7b066f053af43'
                             table: 'sys_ws_operation'
@@ -3066,6 +3081,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_es_latest_script'
+                        id: '949c2d4c0079483b87232f402edd73c2'
+                        key: {
+                            id: 'c42a90ab971eca1424d7b066f053af2f'
+                            table: 'sys_ws_operation'
+                        }
+                    },
+                    {
                         table: 'sys_variable_value'
                         id: '9502af034704121058ceeb02d16d4361'
                         deleted: true
@@ -3097,6 +3120,14 @@ declare global {
                         key: {
                             document_key: 'ec64243d97e8a910b2e1f97e6253af4d'
                             variable: '989d9e235324220002c6435723dc3484'
+                        }
+                    },
+                    {
+                        table: 'sys_es_latest_script'
+                        id: '96254fe930654f03a02eb9531a57a0eb'
+                        key: {
+                            id: '137170d4477b461058ceeb02d16d43f6'
+                            table: 'sys_ws_operation'
                         }
                     },
                     {
@@ -3271,6 +3302,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_es_latest_script'
+                        id: 'a5999550ebd043948e8cae8554ceb0ea'
+                        key: {
+                            id: '2163ed159725061024d7b066f053aff2'
+                            table: 'sys_ws_operation'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: 'a6cea4bab88341f89f075e51e7022674'
                         key: {
@@ -3368,6 +3407,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'a8d72b5d834903903c9299e0deaad3fc'
+                        deleted: false
                         key: {
                             id: '4067ab1d834903903c9299e0deaad388'
                             table: 'sys_ws_operation'
@@ -3376,6 +3416,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'aa47185383f4cf103c9299e0deaad322'
+                        deleted: false
                         key: {
                             id: 'c127145b8330cf103c9299e0deaad343'
                             table: 'sys_ws_operation'
@@ -3558,6 +3599,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'ada7ccc4838147503c9299e0deaad36b'
+                        deleted: false
                         key: {
                             id: 'd3768c44838147503c9299e0deaad382'
                             table: 'sys_ws_operation'
@@ -3752,6 +3794,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'b8b03ed483850b503c9299e0deaad38e'
+                        deleted: false
                         key: {
                             id: '0f903ed483850b503c9299e0deaad30e'
                             table: 'sys_ws_operation'
@@ -4169,6 +4212,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'd9cc2f468374c7103c9299e0deaad339'
+                        deleted: false
                         key: {
                             id: '51ac6b468374c7103c9299e0deaad36f'
                             table: 'sys_ws_operation'
@@ -4194,6 +4238,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'dafcaa2747fb421058ceeb02d16d43b3'
+                        deleted: false
                         key: {
                             id: '655beaab47fb421058ceeb02d16d4341'
                             table: 'sys_ws_operation'
@@ -4322,6 +4367,7 @@ declare global {
                     {
                         table: 'sys_es_latest_script'
                         id: 'e6a6570c83c987503c9299e0deaad3dd'
+                        deleted: false
                         key: {
                             id: '4776170c83c987503c9299e0deaad335'
                             table: 'sys_ws_operation'
