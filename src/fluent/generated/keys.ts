@@ -34,6 +34,11 @@ declare global {
                         table: 'sys_properties'
                         id: '0cc2899f87385610e2041f8d3fbb355e'
                     }
+                    '0ddab4b983dbc7543c9299e0deaad3c2': {
+                        table: 'sys_wizard_answer'
+                        id: '0ddab4b983dbc7543c9299e0deaad3c2'
+                        deleted: true
+                    }
                     '0e85a3f2ffb9831020d2333663e97209': {
                         table: 'sys_script'
                         id: '0e85a3f2ffb9831020d2333663e97209'
@@ -889,6 +894,17 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_choice'
+                        id: '053cf471831fc7543c9299e0deaad37b'
+                        key: {
+                            name: 'var__m_atf_input_variable_9632b19597a82910b2e1f97e6253afef'
+                            element: 'u_assert_type'
+                            value: 'form_submission_canceled_in_browser'
+                            language: 'en'
+                            dependent_value: 'NULL'
+                        }
+                    },
+                    {
                         table: 'sys_choice_set'
                         id: '0590a4a9830143903c9299e0deaad320'
                         key: {
@@ -1639,6 +1655,7 @@ declare global {
                     {
                         table: 'sys_choice'
                         id: '362757e1831943143c9299e0deaad3a1'
+                        deleted: true
                         key: {
                             name: 'var__m_atf_input_variable_9632b19597a82910b2e1f97e6253afef'
                             element: 'u_assert_type'
@@ -2708,6 +2725,7 @@ declare global {
                     {
                         table: 'sys_choice'
                         id: '7e2757e1831943143c9299e0deaad39f'
+                        deleted: true
                         key: {
                             name: 'var__m_atf_input_variable_9632b19597a82910b2e1f97e6253afef'
                             element: 'u_assert_type'
@@ -3974,6 +3992,17 @@ declare global {
                         key: {
                             name: 'u_klf_recordimporter_state'
                             element: 'u_transform_position'
+                        }
+                    },
+                    {
+                        table: 'sys_choice'
+                        id: 'c93cf471831fc7543c9299e0deaad37c'
+                        key: {
+                            name: 'var__m_atf_input_variable_9632b19597a82910b2e1f97e6253afef'
+                            element: 'u_assert_type'
+                            value: 'form_submitted_to_server'
+                            language: 'en'
+                            dependent_value: 'NULL'
                         }
                     },
                     {
