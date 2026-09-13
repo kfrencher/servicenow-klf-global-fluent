@@ -1150,6 +1150,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: '1c983db5c33047ce86b08f7d426856e8'
+                        deleted: false
                         key: {
                             sp_widget: 'bef4a95597682910b2e1f97e6253af86'
                             sp_angular_provider: '8a8862dd97ac2910b2e1f97e6253af7c'
@@ -1896,6 +1897,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: '42d0dab03d8b4a48b6247ff10f245836'
+                        deleted: false
                         key: {
                             sp_widget: 'bef4a95597682910b2e1f97e6253af86'
                             sp_angular_provider: 'cf2feedeff52321020d2333663e97267'
@@ -3735,6 +3737,7 @@ declare global {
                     {
                         table: 'sys_ui_policy_action'
                         id: 'b7930ba92c6946979e8a3a02a759deb1'
+                        deleted: false
                         key: {
                             ui_policy: {
                                 id: 'c3bf5447ff71c31020d2333663e972c2'
@@ -4207,6 +4210,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: 'dd07bdbd6f5346a9add7f56c7ea70a56'
+                        deleted: false
                         key: {
                             sp_widget: 'bef4a95597682910b2e1f97e6253af86'
                             sp_angular_provider: '06e836f0d722120023c84f80de6103a1'
@@ -4503,6 +4507,7 @@ declare global {
                     {
                         table: 'sys_ws_query_parameter_map'
                         id: 'f53ea1105b0141cf9b7327ea07e0b98c'
+                        deleted: false
                         key: {
                             web_service_operation: '655beaab47fb421058ceeb02d16d4341'
                             web_service_query_parameter: 'aa5b387347f7821058ceeb02d16d433c'
@@ -4675,6 +4680,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: 'fb52b6e64e1647a189bf0d53a5809633'
+                        deleted: false
                         key: {
                             sp_widget: '145aa656ff52321020d2333663e97251'
                             sp_angular_provider: 'cf2feedeff52321020d2333663e97267'
@@ -4701,6 +4707,7 @@ declare global {
                     {
                         table: 'sys_ui_policy_action'
                         id: 'fcc8cdd22403487bb8af1cb85aa3032c'
+                        deleted: false
                         key: {
                             ui_policy: {
                                 id: 'f468e37affb9831020d2333663e97249'

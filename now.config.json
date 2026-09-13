@@ -5,5 +5,5 @@
     "accessControls": {
         "runtimeAccessTracking": "none"
     },
-    "jsLevel": "es_latest"
+    "jsLevel": 'helsinki_es5'
 }
