@@ -17,10 +17,8 @@ UiAction({
 }`,
     },
     messages: [],
-    condition: 'KLF_RecordImporter.showExecuteJob(current)',
-    script: `current.update();
-KLF_RecordImporter.executeJob(current);
-action.setRedirectURL(current);`,
+    condition: Now.include('execute_job.condition.server.js'),
+    script: Now.include('execute_job.script.server.js'),
     showUpdate: true,
     showInsert: true,
     $meta: {

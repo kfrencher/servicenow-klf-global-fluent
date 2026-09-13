@@ -17,9 +17,8 @@ UiAction({
 }`,
     },
     messages: [],
-    condition: 'KLF_RecordImporter.showStopTransform(current)',
-    script: `KLF_RecordImporter.stopTransform(current);
-action.setRedirectURL(current);`,
+    condition: Now.include('klf_ri_state_stop_transform.condition.server.js'),
+    script: Now.include('klf_ri_state_stop_transform.script.server.js'),
     showUpdate: true,
     showInsert: true,
     $meta: {

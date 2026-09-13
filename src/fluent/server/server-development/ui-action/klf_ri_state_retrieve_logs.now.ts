@@ -17,9 +17,8 @@ UiAction({
 }`,
     },
     messages: [],
-    condition: 'KLF_RecordImporter.showRetrieveLogs(current)',
-    script: `KLF_RecordImporter.retrieveLogs(current);
-action.setRedirectURL(current);`,
+    condition: Now.include('klf_ri_state_retrieve_logs.condition.server.js'),
+    script: Now.include('klf_ri_state_retrieve_logs.script.server.js'),
     showUpdate: true,
     showInsert: true,
     $meta: {

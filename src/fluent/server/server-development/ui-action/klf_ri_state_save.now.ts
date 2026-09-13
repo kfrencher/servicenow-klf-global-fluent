@@ -17,9 +17,8 @@ UiAction({
 }`,
     },
     messages: [],
-    condition: 'KLF_RecordImporter.showSave(current)',
-    script: `KLF_RecordImporter.save(current);
-action.setRedirectURL(current);`,
+    condition: Now.include('klf_ri_state_save.condition.server.js'),
+    script: Now.include('klf_ri_state_save.script.server.js'),
     showUpdate: true,
     showInsert: true,
     $meta: {

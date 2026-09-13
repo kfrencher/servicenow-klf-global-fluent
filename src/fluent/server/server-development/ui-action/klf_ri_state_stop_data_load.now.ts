@@ -17,9 +17,8 @@ UiAction({
 }`,
     },
     messages: [],
-    condition: 'KLF_RecordImporter.showStopDataLoad(current)',
-    script: `KLF_RecordImporter.stopDataLoad(current);
-action.setRedirectURL(current);`,
+    condition: Now.include('klf_ri_state_stop_data_load.condition.server.js'),
+    script: Now.include('klf_ri_state_stop_data_load.script.server.js'),
     showUpdate: true,
     showInsert: true,
     $meta: {
