@@ -1024,7 +1024,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: '0d31394449084807af6539258cbb48d6'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -1042,7 +1042,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: '0efe4eb0e7aa42d287712065fa187cc1'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -1083,7 +1083,7 @@ declare global {
                     {
                         table: 'sys_security_acl_role'
                         id: '14862770ccee41cfb25e0e07198de309'
-                        deleted: false
+                        deleted: true
                         key: {
                             sys_security_acl: '2eea0659838dcf503c9299e0deaad357'
                             sys_user_role: {
@@ -1097,7 +1097,7 @@ declare global {
                     {
                         table: 'sys_dictionary'
                         id: '14870edf8a094a5eb78a285e6f5649ec'
-                        deleted: true
+                        deleted: false
                         key: {
                             name: 'sys_atf_test'
                             element: 'NULL'
@@ -1150,7 +1150,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: '1c983db5c33047ce86b08f7d426856e8'
-                        deleted: false
+                        deleted: true
                         key: {
                             sp_widget: 'bef4a95597682910b2e1f97e6253af86'
                             sp_angular_provider: '8a8862dd97ac2910b2e1f97e6253af7c'
@@ -1318,7 +1318,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: '22f666b9577e45acaf2314220a6a0c7e'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -1836,7 +1836,7 @@ declare global {
                     {
                         table: 'sys_security_acl_role'
                         id: '3e34a1929b6b42e0b8a3558169258baa'
-                        deleted: false
+                        deleted: true
                         key: {
                             sys_security_acl: '2eea0659838dcf503c9299e0deaad33e'
                             sys_user_role: {
@@ -1902,7 +1902,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: '42d0dab03d8b4a48b6247ff10f245836'
-                        deleted: false
+                        deleted: true
                         key: {
                             sp_widget: 'bef4a95597682910b2e1f97e6253af86'
                             sp_angular_provider: 'cf2feedeff52321020d2333663e97267'
@@ -2460,7 +2460,7 @@ declare global {
                     {
                         table: 'sys_security_acl_role'
                         id: '6f607945886742a5a63f48dc7643cfde'
-                        deleted: false
+                        deleted: true
                         key: {
                             sys_security_acl: '26ea0659838dcf503c9299e0deaad34b'
                             sys_user_role: {
@@ -2572,7 +2572,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: '748b3a7cad4a4c67b127cc7f2a1195c6'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -3050,7 +3050,7 @@ declare global {
                     {
                         table: 'sys_index'
                         id: '8f93b5e2dd8b4b6882aaf56d1a2a938f'
-                        deleted: true
+                        deleted: false
                         key: {
                             logical_table_name: 'u_klf_recordimporter_state'
                             col_name_string: 'u_name'
@@ -3186,7 +3186,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: '9e75daf1bde34443b2849e10fba13b49'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -3258,7 +3258,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'a1bd24bf401046e483ce4e9f49191ad2'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -3547,7 +3547,7 @@ declare global {
                     {
                         table: 'sys_security_acl_role'
                         id: 'ad11b314809a4821a5884a95b584b8a6'
-                        deleted: false
+                        deleted: true
                         key: {
                             sys_security_acl: '1aeac259838dcf503c9299e0deaad3f9'
                             sys_user_role: {
@@ -3589,7 +3589,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'ad2e4a98eed541b1bec094bbd6e6c1f0'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -3617,7 +3617,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'ae34e2332c0f431f84d0e3faf184b46c'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -3779,7 +3779,7 @@ declare global {
                     {
                         table: 'sys_ui_policy_action'
                         id: 'b7930ba92c6946979e8a3a02a759deb1'
-                        deleted: false
+                        deleted: true
                         key: {
                             ui_policy: {
                                 id: 'c3bf5447ff71c31020d2333663e972c2'
@@ -4108,7 +4108,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'd45529a8a5334d0a871c317ca1562c06'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -4221,7 +4221,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'd9fc22deca4a423fa2a10e9b1f16dc41'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -4255,7 +4255,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: 'dd07bdbd6f5346a9add7f56c7ea70a56'
-                        deleted: false
+                        deleted: true
                         key: {
                             sp_widget: 'bef4a95597682910b2e1f97e6253af86'
                             sp_angular_provider: '06e836f0d722120023c84f80de6103a1'
@@ -4264,7 +4264,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'dd14ad2a302146beaadfa84b1522c333'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -4324,7 +4324,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'e47ff290203e4b3db07b917206629b02'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -4385,7 +4385,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'e85facf4aedb40c59e968bde37531161'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -4495,7 +4495,7 @@ declare global {
                     {
                         table: 'sys_element_mapping'
                         id: 'f1e6264308d441e9b833e9bf8c476d08'
-                        deleted: false
+                        deleted: true
                         key: {
                             field: 'script'
                             table: 'var__m_atf_input_variable_41de4a935332120028bc29cac2dc349a'
@@ -4553,7 +4553,7 @@ declare global {
                     {
                         table: 'sys_ws_query_parameter_map'
                         id: 'f53ea1105b0141cf9b7327ea07e0b98c'
-                        deleted: false
+                        deleted: true
                         key: {
                             web_service_operation: '655beaab47fb421058ceeb02d16d4341'
                             web_service_query_parameter: 'aa5b387347f7821058ceeb02d16d433c'
@@ -4726,7 +4726,7 @@ declare global {
                     {
                         table: 'm2m_sp_ng_pro_sp_widget'
                         id: 'fb52b6e64e1647a189bf0d53a5809633'
-                        deleted: false
+                        deleted: true
                         key: {
                             sp_widget: '145aa656ff52321020d2333663e97251'
                             sp_angular_provider: 'cf2feedeff52321020d2333663e97267'
@@ -4753,7 +4753,7 @@ declare global {
                     {
                         table: 'sys_ui_policy_action'
                         id: 'fcc8cdd22403487bb8af1cb85aa3032c'
-                        deleted: false
+                        deleted: true
                         key: {
                             ui_policy: {
                                 id: 'f468e37affb9831020d2333663e97249'
