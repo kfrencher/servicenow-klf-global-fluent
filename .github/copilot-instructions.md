@@ -22,7 +22,7 @@
 
 - `Now` and data helpers are SDK globals in `.now.ts` files: do not import them. Import only Fluent constructors/types from `@servicenow/sdk/core`.
 - Give new top-level metadata records a stable `$id: Now.ID['descriptive-key']`; never invent a sys_id. Commit the generated `keys.ts` update after building. For same-app references, export/import the Fluent record variable (or `.$id` when required), rather than using `Now.ID` as a value.
-- This application uses inline-file scripts via `Now.include()` for Script Includes, business rules, REST routes, client scripts, widgets, and UI pages. Preserve the relative file pairing when moving or renaming metadata.
-- Most server-side artifacts opt into `$meta: { useEsLatest: true }`, even though `now.config.json` defaults the application to `helsinki_es5`; retain or deliberately set the per-record metadata when changing server scripts.
+- This application uses inline-file scripts via `Now.include()` for Script Includes, business rules, REST routes, client scripts, widgets, UI Actions, and UI pages. Preserve the relative file pairing when moving or renaming metadata.
+- Server-side artifacts opt into `$meta: { useEsLatest: true }`, even though `now.config.json` defaults the application to `helsinki_es5`; retain or deliberately set the per-record metadata when changing server scripts.
 - `keys.ts` is build-generated and committed. Never remove a Fluent metadata definition or manually delete a key without first confirming whether the deletion must propagate to installed instances; a missing tracked definition becomes a deployable deletion.
 - Avoid hand-renaming transformed `generated/` artifacts. Use the repository rename script so include and import references remain valid.
