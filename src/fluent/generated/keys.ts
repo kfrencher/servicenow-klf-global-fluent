@@ -565,6 +565,10 @@ declare global {
                         table: 'sys_script_include'
                         id: '98c57cc333d16610504662989d5c7bd8'
                     }
+                    '9941d97183130b543c9299e0deaad3e3': {
+                        table: 'sys_wizard_answer'
+                        id: '9941d97183130b543c9299e0deaad3e3'
+                    }
                     '994865ec33592e10504662989d5c7b20': {
                         table: 'sys_script_fix'
                         id: '994865ec33592e10504662989d5c7b20'
@@ -3156,6 +3160,15 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_claim'
+                        id: '96e9d3b7943948d1ba423c616bba992b'
+                        key: {
+                            claim_owner_scope: 'fa03e59197682910b2e1f97e6253af92'
+                            previous_claim_scope: 'fa03e59197682910b2e1f97e6253af92'
+                            metadata_update_name: 'sys_dictionary_sys_atf_test_NULL'
+                        }
+                    },
+                    {
                         table: 'sys_ui_element'
                         id: '99075e672bfe4f8ab57470d662570efb'
                         deleted: true
@@ -4499,6 +4512,7 @@ declare global {
                     {
                         table: 'sys_claim'
                         id: 'ef781c10834f0f103c9299e0deaad33c'
+                        deleted: true
                         key: {
                             claim_owner_scope: 'fa03e59197682910b2e1f97e6253af92'
                             previous_claim_scope: 'fa03e59197682910b2e1f97e6253af92'
