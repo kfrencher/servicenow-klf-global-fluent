@@ -12,7 +12,6 @@
  * how routing is performed in ServicePortal after a UI Action is executed.
  */
 // @ts-ignore 
-var global = global || {};
 /**
  * @class global.KLF_SPUtils
  * contains utility functions

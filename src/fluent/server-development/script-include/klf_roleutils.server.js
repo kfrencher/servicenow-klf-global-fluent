@@ -5,7 +5,6 @@
  */
 
 //@ts-ignore
-var global = global || {};
 
 global.KLF_RoleUtils = function() {};
 

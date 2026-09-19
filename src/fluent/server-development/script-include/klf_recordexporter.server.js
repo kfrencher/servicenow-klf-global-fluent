@@ -1,5 +1,4 @@
 //@ts-ignore
-var global = global || {};
 
 /**
  * @typedef {Object} KLF_ExportRecord

@@ -4,8 +4,6 @@
  * quickly create new tests.
  */
 
-/** @ts-ignore */
-var global = global || {};
 
 global.KLF_AtfAddStepsHelper = (function() {
     return {

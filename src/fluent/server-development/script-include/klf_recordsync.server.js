@@ -5,7 +5,6 @@
  * - Might even need to track where you are in the table. Maybe by sorting by created date
  */
 //@ts-ignore
-var global = global || {};
 
 /**
  * Object that provides methods to sync records between two ServiceNow instances

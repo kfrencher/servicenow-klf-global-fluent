@@ -51,7 +51,6 @@
 
 
 //@ts-ignore
-var global = global || {};
 
 /**
  * 

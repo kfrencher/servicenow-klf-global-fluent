@@ -1,4 +1,3 @@
-var global = global || {};
 /**
  * Object used to copy application elements from one scope to another.
  * This is useful when you want to duplicate a scoped application to a new scope.

@@ -12,7 +12,6 @@
  * - Create a user
  */
 //@ts-ignore
-var global = global || {};
 
 /**
  * @typedef {{sysId:string,tableName:string}} KLF_Document

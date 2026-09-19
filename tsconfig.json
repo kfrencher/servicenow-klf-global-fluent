@@ -1,5 +1,6 @@
 {
     "exclude": [
+        "tools/**/*",
         "lib/dts/clientAPI.d.ts",
         "lib/dts/serverAPI.d.ts",
         "dist",
@@ -11,21 +12,14 @@
         "lib/dts/klf.js"
     ],
     "compilerOptions": {
-        "rootDir": "./src/fluent",
+        "rootDir": "./src",
         "types": ["angular","jasmine","chance"],
-        "module": "CommonJS",
+        "module": "esnext",
         "target": "es2020",
         "allowJs": true,
         "checkJs": true,
         "outDir": "build",
-        "strictNullChecks": true,
-        "strict": false,
-        "plugins": [
-            {
-                "name": "typescript-strict-plugin",
-                "paths": ["KLF/src/Server Development/Script Includes", "G KLF/src/Server Development/Script Includes"]
-            }
-        ]
+        "strict": true
     },
     "serviceNowScopedAppInfo": [
         {

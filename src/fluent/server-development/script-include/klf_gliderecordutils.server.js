@@ -8,7 +8,6 @@
  */
 
 //@ts-ignore
-var global = global || {};
 global.KLF_GlideRecordUtils = function() {};
 
 global.KLF_GlideRecordUtils.prototype = {

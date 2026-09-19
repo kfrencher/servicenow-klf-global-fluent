@@ -25,7 +25,6 @@
  */
 
 //@ts-ignore
-var global = global || {};
 
 global.KLF_RecordExporterService = (function() {
     const LOG_SOURCE = 'KLF_RecordExporterService';

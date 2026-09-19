@@ -10,7 +10,6 @@
  */
 
 //@ts-ignore
-var global = global || {};
 
 global.KLF_GroupUtils = function() {};
 

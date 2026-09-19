@@ -27,7 +27,6 @@
  * roleUtils.syncRoles(missingRoles);
  */
 
-var global = global || {};
 
 /**
  * @param {KLF_RecordSyncConnectionConfig} connectionConfig 

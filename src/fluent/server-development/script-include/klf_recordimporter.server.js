@@ -32,7 +32,6 @@
  */
 
 //@ts-ignore
-var global = global || {};
 
 /**
  * @class KLF_RecordImporter

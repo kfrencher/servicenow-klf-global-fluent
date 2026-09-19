@@ -1,5 +1,4 @@
 //@ts-ignore -- I know this throws an error, but it allows VSCode to autocomplete the methods
-var global = global || {};
 
 /**
  * ServiceNow has a module called Business Calendar. Business Calendars are used to define time

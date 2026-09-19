@@ -8,7 +8,6 @@
  */
 
 //@ts-ignore
-var global = global || {};
 // Add logging so have a better idea of what's going on
 
 /**

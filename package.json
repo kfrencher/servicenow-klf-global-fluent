@@ -9,6 +9,7 @@
     "scripts": {
         "build_and_deploy": "now-sdk build && now-sdk deploy",
         "build": "now-sdk build",
+        "concatenate:script-includes": "node tools/concatenate-script-includes.cjs",
         "deploy": "now-sdk install",
         "clean": "now-sdk clean",
         "transform": "now-sdk transform -f false",

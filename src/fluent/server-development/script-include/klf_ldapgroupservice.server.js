@@ -8,7 +8,6 @@
  */
 
 //@ts-ignore
-var global = global || {};
 /**
  * There was no where to put this information, so storing it here. These are the attributes
  * available for active directory LDAP entry:

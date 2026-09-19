@@ -1,4 +1,3 @@
-var global = global || {};
 
 /**
  * Creates a mock RESTAPIRequest object for testing purposes.

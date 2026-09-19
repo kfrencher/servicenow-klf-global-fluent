@@ -1,6 +1,5 @@
 /* eslint-disable */
 // @ts-nocheck
-var global = global || {};
 
 global.KLF_TestChance =
     (function() {

@@ -11,7 +11,6 @@
  * - queueMetricUpdate: Used in a business rule to queue the metric.update event. This is used when creating metrics on a table that doesn't extend Task
  */
 // @ts-ignore
-var global = global || {};
 
 global.KLF_MetricUtils = function() {};
 

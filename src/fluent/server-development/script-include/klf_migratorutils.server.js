@@ -245,7 +245,6 @@ KLF_MigratorUtils.prototype.getSysIdsToInsert = function(sourceSysIds, sourceTab
 };
 
 //@ts-ignore
-var global = global || {};
 global.KLF_MigratorUtils = KLF_MigratorUtils;
 
 
