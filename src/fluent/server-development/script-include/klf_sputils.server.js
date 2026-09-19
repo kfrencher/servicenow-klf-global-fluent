@@ -11,7 +11,6 @@
  * - setRedirectURL - Used in the form widget in ServicePortal to provide a redirect URL. This is to provide some standardization on
  * how routing is performed in ServicePortal after a UI Action is executed.
  */
-// @ts-ignore 
 /**
  * @class global.KLF_SPUtils
  * contains utility functions

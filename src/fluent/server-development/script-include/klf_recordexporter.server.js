@@ -1,5 +1,3 @@
-//@ts-ignore
-
 /**
  * @typedef {Object} KLF_ExportRecord
  * @property {string} xml - The XML representation of the record and its related records.

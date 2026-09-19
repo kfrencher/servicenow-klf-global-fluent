@@ -1,5 +1,3 @@
-//@ts-ignore -- I know this throws an error, but it allows VSCode to autocomplete the methods
-
 /**
  * ServiceNow has a module called Business Calendar. Business Calendars are used to define time
  * periods that are significant to the business that differ from the standard calendar year.

@@ -49,9 +49,6 @@
  * }} KLF_RecordSync_UpdateRemoteNotificationsResponse
  */
 
-
-//@ts-ignore
-
 /**
  * 
  * @param {KLF_RecordSyncConnectionConfig} connectionConfig 

@@ -244,10 +244,7 @@ KLF_MigratorUtils.prototype.getSysIdsToInsert = function(sourceSysIds, sourceTab
     });
 };
 
-//@ts-ignore
 global.KLF_MigratorUtils = KLF_MigratorUtils;
-
-
 
 // Example of how to use the KLF_MigratorUtils class to transfer data from one instance to another
 (function() {

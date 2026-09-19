@@ -9,8 +9,6 @@
  * into the parent group
  */
 
-//@ts-ignore
-
 global.KLF_GroupUtils = function() {};
 
 global.KLF_GroupUtils.prototype = {

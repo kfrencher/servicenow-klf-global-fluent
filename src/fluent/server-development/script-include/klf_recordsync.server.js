@@ -4,7 +4,6 @@
  * - Maybe sort the tables in order and keep track of when a table is completed
  * - Might even need to track where you are in the table. Maybe by sorting by created date
  */
-//@ts-ignore
 
 /**
  * Object that provides methods to sync records between two ServiceNow instances

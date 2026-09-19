@@ -29,8 +29,6 @@
  * @typedef {{sysId:string,username:string?,source:string?,employeeNumber:string?}} KLF_RecordSync_RemoteUser
  */
 
-//@ts-ignore
-
 /**
  * 
  * @param {KLF_RecordSyncConnectionConfig} connectionConfig 

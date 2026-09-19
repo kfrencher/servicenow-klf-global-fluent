@@ -10,8 +10,6 @@
  * - clearMetricsByRelatedRecord: Deletes all metric instances for a given record
  * - queueMetricUpdate: Used in a business rule to queue the metric.update event. This is used when creating metrics on a table that doesn't extend Task
  */
-// @ts-ignore
-
 global.KLF_MetricUtils = function() {};
 
 global.KLF_MetricUtils.prototype = {

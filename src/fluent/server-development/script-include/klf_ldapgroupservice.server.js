@@ -6,8 +6,6 @@
  * It can ingest a single group or multiple groups. It can also refresh the membership of multiple
  * groups based on the group type names or sys_ids.
  */
-
-//@ts-ignore
 /**
  * There was no where to put this information, so storing it here. These are the attributes
  * available for active directory LDAP entry:

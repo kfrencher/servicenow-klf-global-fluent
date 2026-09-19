@@ -6,8 +6,6 @@
  * It also provides a function to transform a GlideRecord into a map. This is useful when you need to pass
  * GlideRecord data to a client script. The map can be easily converted to JSON and passed to the client script.
  */
-
-//@ts-ignore
 global.KLF_GlideRecordUtils = function() {};
 
 global.KLF_GlideRecordUtils.prototype = {

@@ -31,8 +31,6 @@
  * @property {(message: string) => void} error
  */
 
-//@ts-ignore
-
 /**
  * @class KLF_RecordImporter
  * Contains utility functions for importing records exported by `RecordExporter`.

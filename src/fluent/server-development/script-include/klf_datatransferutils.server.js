@@ -6,8 +6,6 @@
  * 
  * There are a few methods in this script that are still useful and may be used in other scripts.
  */
-
-//@ts-ignore
 // Add logging so have a better idea of what's going on
 
 /**

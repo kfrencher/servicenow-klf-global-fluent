@@ -11,7 +11,6 @@
  * - Create a group, including adding users to the group
  * - Create a user
  */
-//@ts-ignore
 
 /**
  * @typedef {{sysId:string,tableName:string}} KLF_Document

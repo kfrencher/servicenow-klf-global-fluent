@@ -4,8 +4,6 @@
  * - groupHasRole: Returns true if the group has the role.
  */
 
-//@ts-ignore
-
 global.KLF_RoleUtils = function() {};
 
 global.KLF_RoleUtils.prototype = {
