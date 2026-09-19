@@ -1,3 +1,15 @@
+/**
+ * @param {angular.IScope & Object.<string, *>} $scope
+ * @param {angular.ILocationService} $location
+ * @param {angular.IWindowService} $window
+ * @param {*} spUtil
+ * @param {*} amb
+ * @param {angular.IHttpService} $http
+ * @param {*} spAriaUtil
+ * @param {angular.ITimeoutService} $timeout
+ * @param {*} spNavStateManager
+ * @param {*} i18n
+ */
 function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, $timeout, spNavStateManager, i18n) {
     /** @type {this & {data: any}} */
     // @ts-ignore
@@ -33,8 +45,9 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         setKeywords: 'data_table.setKeywords'
     };
 
-    $scope.go = function(table, item) {
-        if ($window.getSelection().toString().length > 0)
+    $scope.go = function(/** @type {string} */ table, /** @type {*} */ item) {
+        var selection = $window.getSelection();
+        if (selection && selection.toString().length > 0)
             return;
 
         spNavStateManager.onRecordChange(table).then(function() {
@@ -60,15 +73,16 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
             $scope.getTinyUrl(url);
     };
 
-    $scope.getTinyUrl = function(url) {
+    $scope.getTinyUrl = function(/** @type {string} */ url) {
         $http.post('/api/now/tinyurl', {
             url: url
-        }).then(function(response) {
+        }).then(function(/** @type {*} */ response) {
             $scope.tinyUrl = new URL($window.location.origin + '/' + response.data.result).searchParams.get('sysparm_tiny');
         });
     };
 
     $scope.newRecord = function() {
+        /** @type {{id: string, table: string, view: string, sys_id: string, query?: string}} */
         var parms = {
             id: 'form',
             table: $scope.data.table,
@@ -89,7 +103,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
                 $scope.data[keys[x]] = s[keys[x]];
             }
         }
-        $scope.server.update().then(function(data) {
+        $scope.server.update().then(function(/** @type {*} */ data) {
             if (s.sys_id) {
                 for (var x in data.list) {
                     if (data.list[x].sys_id == s.sys_id) {
@@ -102,7 +116,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
 
     if ($scope.options.fromUrl) {
         var origSearch = $location.search();
-        $scope.$on('$locationChangeSuccess', function(e) {
+        $scope.$on('$locationChangeSuccess', function(/** @type {*} */ e) {
             var s = $location.search();
             if (origSearch.id !== s.id)
                 return;
@@ -118,17 +132,17 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
     }
 
 
-    $scope.getNumber = function(num) {
+    $scope.getNumber = function(/** @type {number} */ num) {
         return new Array(num);
     };
 
-    $scope.mathMin = function(v1, v2) {
+    $scope.mathMin = function(/** @type {number} */ v1, /** @type {number} */ v2) {
         return Math.min(v1, v2);
     };
 
-    function getData(updateUrl) {
+    function getData(/** @type {boolean} */ updateUrl) {
         var f = $scope.data;
-        spUtil.update($scope).then(function(data) {
+        spUtil.update($scope).then(function(/** @type {*} */ data) {
             f.view = data.view;
             if ($scope.options.fromUrl && updateUrl)
                 setPermalink(f.table, f.filter, f.o, f.d, f.p);
@@ -155,7 +169,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
             spAriaUtil.sendLiveMessage((data.filter ? i18nMsgs.filteredNoResults : i18nMsgs.unFilteredNoResults).withValues([data.table_plural]));
     }
 
-    function setPermalink(table, filter, orderBy, orderDirection, page) {
+    function setPermalink(/** @type {string} */ table, /** @type {string} */ filter, /** @type {string} */ orderBy, /** @type {string} */ orderDirection, /** @type {number} */ page) {
         $scope.ignoreLocationChange = true;
         var search = $location.search();
         angular.extend(search, {
@@ -169,16 +183,17 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         $location.search(search);
     }
 
+    /** @type {{unsubscribe: () => void}|undefined} */
     var watcher;
 
-    function initRecordWatcher(table, filter) {
+    function initRecordWatcher(/** @type {string} */ table, /** @type {string} */ filter) {
         if (watcher)
             watcher.unsubscribe();
 
         if (table && filter) {
             var watcherChannel = amb.getChannelRW(table, filter);
             amb.connect();
-            watcher = watcherChannel.subscribe(function(message) {
+            watcher = watcherChannel.subscribe(function(/** @type {*} */ message) {
                 if (!message.data)
                     return;
                 switch (message.data.action) {
@@ -199,7 +214,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         }
     }
 
-    function updateRowFromRW(message) {
+    function updateRowFromRW(/** @type {*} */ message) {
         if (message.data && message.data.sys_id && $scope.data.list) {
             var row, field;
             for (var i = 0; i < $scope.data.list.length; i++) {
@@ -222,7 +237,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
             watcher.unsubscribe();
     });
 
-    $scope.setPageNum = function(num) {
+    $scope.setPageNum = function(/** @type {number} */ num) {
         $scope.data.p = num;
         getData(true);
         $timeout(function() {
@@ -230,7 +245,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         });
     };
 
-    $scope.setOrderBy = function(field) {
+    $scope.setOrderBy = function(/** @type {string} */ field) {
         var d = "asc";
         // descending default sort for date/time columns for UI consistency
         var fieldType = $scope.data.column_types[field];
@@ -255,7 +270,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         $scope.setSearch(true);
     };
 
-    $scope.setSearch = function(updateUrl) {
+    $scope.setSearch = function(/** @type {boolean} */ updateUrl) {
         $scope.data.p = 1;
         if ($scope.data.keywords) {
             var previousSearchTerm = $scope.previousSearchTerm;
@@ -271,17 +286,17 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         getData(updateUrl);
     };
 
-    $scope.$on(eventNames.setFilter, function(e, newFilter) {
+    $scope.$on(eventNames.setFilter, function(/** @type {*} */ e, /** @type {string} */ newFilter) {
         $scope.data.filter = newFilter;
         $scope.setSearch(false);
     });
 
-    $scope.$on(eventNames.setKeywords, function(e, keywords) {
+    $scope.$on(eventNames.setKeywords, function(/** @type {*} */ e, /** @type {string} */ keywords) {
         $scope.data.keywords = keywords;
         $scope.setSearch(false);
     });
 
-    $scope.$on('widget-filter-breadcrumbs.queryModified', function(e, newFilter) {
+    $scope.$on('widget-filter-breadcrumbs.queryModified', function(/** @type {*} */ e, /** @type {string} */ newFilter) {
         $scope.data.filter = newFilter;
         $scope.setSearch(true);
     });
@@ -298,7 +313,7 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         return !$scope.data.list.length && !$scope.data.num_pages && !$scope.data.invalid_table && !$scope.loadingData;
     };
 
-    c.appendQuery = function(query) {
+    c.appendQuery = function(/** @type {string} */ query) {
         if ($scope.data.filter.length > 1)
             $scope.data.filter += '^';
         $scope.data.filter += query;
@@ -317,13 +332,13 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         $scope.checkAndSetTinyUrl();
     });
 
-    function parseQuery(table, queryString) {
-        return $http.post('/api/now/sp/parsequery/' + table, queryString).then(function(response) {
+    function parseQuery(/** @type {string} */ table, /** @type {string} */ queryString) {
+        return $http.post('/api/now/sp/parsequery/' + table, queryString).then(function(/** @type {*} */ response) {
             return response.data.result;
         });
     }
 
-    c.createQueryTerm = function(table, field, sys_id, operator) {
+    c.createQueryTerm = function(/** @type {string} */ table, /** @type {string} */ field, /** @type {string} */ sys_id, /** @type {string} */ operator) {
         return $http.get('/api/now/sp/getInOutQueryTerm', {
             params: {
                 table: table,
@@ -331,13 +346,13 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
                 field: field,
                 operator: operator
             }
-        }).then(function(response) {
+        }).then(function(/** @type {*} */ response) {
             if (response && response.data && response.data.result)
                 return response.data.result.parts;
         });
     };
 
-    c.isMultiPart = function(terms) {
+    c.isMultiPart = function(/** @type {*} */ terms) {
         for (var i = 0; i < terms.length; i++) {
             var term = terms[i];
             while (term.left)
@@ -348,10 +363,10 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         return false;
     };
 
-    c.showMatching = function(field, newTerm) {
+    c.showMatching = function(/** @type {string} */ field, /** @type {*} */ newTerm) {
         var queryString = $scope.data.filter;
         var eq = "";
-        parseQuery($scope.data.table, queryString).then(function(oldTerms) {
+        parseQuery($scope.data.table, queryString).then(function(/** @type {*} */ oldTerms) {
             var isMultiPart = c.isMultiPart(oldTerms);
             for (var i = 0; i < oldTerms.length; i++) {
                 var term = oldTerms[i];
@@ -379,11 +394,11 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
 
             $scope.data.filter = eq;
             $scope.setSearch();
-            $location.search(angular.extend($location.$$search, { spa: 1, filter: eq, }));
+            $location.search(angular.extend(/** @type {*} */ ($location).$$search, { spa: 1, filter: eq, }));
         });
     };
 
-    c.filterOut = function(field, newTerm) {
+    c.filterOut = function(/** @type {string} */ field, /** @type {*} */ newTerm) {
         var eq = "";
         if ($scope.data.filter.indexOf("^NQ") == -1) {
             // don't need server roundtrip to parse query,
@@ -394,13 +409,13 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
             eq += getEncodedTerm(newTerm);
             $scope.data.filter = eq;
             $scope.setSearch();
-            $location.search(angular.extend($location.$$search, { spa: 1, filter: eq, }));
+            $location.search(angular.extend(/** @type {*} */ ($location).$$search, { spa: 1, filter: eq, }));
             return;
         }
 
         // query may be multipart so must apply new term to each part
         var queryString = $scope.data.filter;
-        parseQuery($scope.data.table, queryString).then(function(oldTerms) {
+        parseQuery($scope.data.table, queryString).then(function(/** @type {*} */ oldTerms) {
             for (var i = 0; i < oldTerms.length; i++) {
                 var term = oldTerms[i];
                 if (eq.length)
@@ -424,11 +439,11 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
 
             $scope.data.filter = eq;
             $scope.setSearch();
-            $location.search(angular.extend($location.$$search, { spa: 1, filter: eq, }));
+            $location.search(angular.extend(/** @type {*} */ ($location).$$search, { spa: 1, filter: eq, }));
         });
     };
 
-    function isSameField(t1, t2) {
+    function isSameField(/** @type {*} */ t1, /** @type {*} */ t2) {
         if ('left' in t1 && 'left' in t2)
             return t1.left.query_term_field === t2.left.query_term_field;
         else if ('left' in t1)
@@ -438,6 +453,10 @@ function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, 
         return t1.query_term_field === t2.query_term_field;
     }
 
+    /**
+     * @param {*} term
+     * @returns {string}
+     */
     function getEncodedTerm(term) {
         var eq;
         if (term.left) {

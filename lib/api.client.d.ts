@@ -1,6 +1,3 @@
-/*
-Copyright (C) 2019 ServiceNow, Inc. All rights reserved.
-*/
 declare var _window: any;
 declare var _oswWindow: any;
 declare var _klfWindow: any;
@@ -18,6 +15,28 @@ declare var loadForm: any;
 declare var g_scratchpad: any;
 
 declare function addRenderEvent(callback: () => void): void;
+
+interface SPAction {
+    [key: string]: any;
+    primary?: boolean;
+    sys_id: string;
+    action_name: string;
+    form_style: string;
+    hint: string;
+    is_button: boolean;
+    is_context: boolean;
+    is_link: boolean;
+    is_custom: boolean;
+    display_order: number;
+    name: string;
+    fn: string;
+    onclick: string;
+    is_client: boolean;
+}
+
+interface AngularScope extends angular.IScope {
+    [key: string]: any;
+}
 
 declare class GlideModal {
     /**
@@ -340,3 +359,43 @@ interface HTMLElement { }
 interface queryCondition { }
 interface DOMElement { }
 interface GlideList2 { }
+
+declare class AMBClient {
+  connect(): void;
+  disconnect(): void;
+  abort(): void;
+  batch(data: any): void;
+  cancelTransaction(data: any): void;
+  extendSession(): void;
+  reestablishSession(): void;
+  loginComplete(): void;
+
+  getBaseURL(): string;
+  getClientId(): string;
+  getClientWindow(): Window;
+  getConnectionState(): string;
+  getConnectionEvents(): string[];
+  getEvents(): string[];
+  getState(): string;
+  getServerConnection(): any;
+  getTokenManagementExtension(): any;
+
+  getChannel(name: string, filter?: any, callback?: Function): any;
+  getChannel0(data: any, params?: any): any;
+  getChannels(): any[];
+  getRecordWatcherChannel(
+    table: string,
+    filter?: any,
+    callback?: Function,
+    data?: any,
+    params?: any
+  ): any;
+
+  isLoggedIn(): boolean;
+
+  subscribeToEvent(name: string, filter?: any, callback?: Function): void;
+  unsubscribeFromEvent(name: string, filter?: any): void;
+
+  registerExtension(name: string, extension: any): void;
+  unregisterExtension(name: string): void;
+}

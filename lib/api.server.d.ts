@@ -2371,46 +2371,6 @@ declare namespace sn_ih {
   }
 }
 
-declare class AMBClient {
-  connect(): void;
-  disconnect(): void;
-  abort(): void;
-  batch(data: any): void;
-  cancelTransaction(data: any): void;
-  extendSession(): void;
-  reestablishSession(): void;
-  loginComplete(): void;
-
-  getBaseURL(): string;
-  getClientId(): string;
-  getClientWindow(): Window;
-  getConnectionState(): string;
-  getConnectionEvents(): string[];
-  getEvents(): string[];
-  getState(): string;
-  getServerConnection(): any;
-  getTokenManagementExtension(): any;
-
-  getChannel(name: string, filter?: any, callback?: Function): any;
-  getChannel0(data: any, params?: any): any;
-  getChannels(): any[];
-  getRecordWatcherChannel(
-    table: string,
-    filter?: any,
-    callback?: Function,
-    data?: any,
-    params?: any
-  ): any;
-
-  isLoggedIn(): boolean;
-
-  subscribeToEvent(name: string, filter?: any, callback?: Function): void;
-  unsubscribeFromEvent(name: string, filter?: any): void;
-
-  registerExtension(name: string, extension: any): void;
-  unregisterExtension(name: string): void;
-}
-
 declare class GlideScriptRecordUtil {
   static get(gr: GlideRecord): GlideScriptRecordUtil;
   /**

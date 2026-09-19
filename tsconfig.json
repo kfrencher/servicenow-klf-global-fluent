@@ -1,34 +1,12 @@
 {
-    "exclude": [
-        "tools/**/*",
-        "lib/dts/clientAPI.d.ts",
-        "lib/dts/serverAPI.d.ts",
-        "dist",
-        "build",
-        "gulpfile.js",
-        "**/*adrum*",
-        "**/Service Portal/**/*",
-        "lib/dts/g_klf.js",
-        "lib/dts/klf.js"
-    ],
-    "compilerOptions": {
-        "rootDir": "./src",
-        "types": ["angular","jasmine","chance"],
-        "module": "esnext",
-        "target": "es2020",
-        "allowJs": true,
-        "checkJs": true,
-        "outDir": "build",
-        "strict": true
-    },
-    "serviceNowScopedAppInfo": [
+    "files": [],
+    "references": [
         {
-            "name": "KLF",
-            "scriptIncludePath": "KLF/src/Server Development/Script Includes"
+            "path": "./tsconfig.server.json"
         },
         {
-            "name": "G KLF",
-            "scriptIncludePath": "G KLF/src/Server Development/Script Includes"
+            "path": "./tsconfig.client.json"
         }
     ]
+
 }

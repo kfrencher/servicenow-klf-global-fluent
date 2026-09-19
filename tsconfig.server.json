@@ -1,0 +1,21 @@
+{
+    "exclude": [
+        "dist",
+        "build"
+    ],
+    "include": [
+        "lib/**/*.server.d.ts",
+        "src/**/*.server.js"
+    ],
+    "compilerOptions": {
+        "rootDir": "./src",
+        "lib": ["es2020"],
+        "types": ["angular","jasmine","chance"],
+        "module": "esnext",
+        "target": "es2020",
+        "allowJs": true,
+        "checkJs": true,
+        "noEmit": true,
+        "strict": true
+    }
+}

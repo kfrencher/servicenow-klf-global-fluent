@@ -16,6 +16,9 @@ api.controller =
      * @param {*} glideUserSession 
      * @param {*} i18n 
      * @param {*} klfModal 
+     * @param {*} uiActionExecutor 
+     * @param {*} spUIActionFactory
+     * @param {*} klfFormContext
      */
     function controller($rootScope, $scope, $timeout, $location, $log, $window, spUtil, nowAttachmentHandler, spAriaUtil, spNavStateManager, glideUserSession, i18n, klfModal, uiActionExecutor, spUIActionFactory, klfFormContext) {
         // KLF ADDITION
