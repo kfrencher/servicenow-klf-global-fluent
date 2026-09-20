@@ -1,3 +1,5 @@
+api.controller = function() {};
+
 /**
  * @param {angular.IRootScopeService} $rootScope 
  * @param {AngularScope} $scope 
@@ -16,7 +18,7 @@
  * @param {*} spUIActionFactory
  * @param {*} klfFormContext
  */
-function controller($rootScope, $scope, $timeout, $location, $log, $window, spUtil, nowAttachmentHandler, spAriaUtil, spNavStateManager, glideUserSession, i18n, klfModal, uiActionExecutor, spUIActionFactory, klfFormContext) {
+api.controller = function ($rootScope, $scope, $timeout, $location, $log, $window, spUtil, nowAttachmentHandler, spAriaUtil, spNavStateManager, glideUserSession, i18n, klfModal, uiActionExecutor, spUIActionFactory, klfFormContext) {
     // KLF ADDITION
     // adding the g_user reference to allow UI Actions to be compatible
     /** @type {g_user} */

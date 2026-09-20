@@ -1,4 +1,4 @@
-// @ts-nocheck
+api.controller = function() {};
 
 /**
  * @param {angular.IScope & Object.<string, *>} $scope
@@ -12,7 +12,7 @@
  * @param {*} $http
  * @param {*} $window
  */
-function spTicketConversation($scope, nowAttachmentHandler, $animate, $rootScope, cabrillo, $timeout, snRecordWatcher, spUtil, spAriaUtil, $http, $window, $sce, snAttachmentHandler, i18n, dynamicTranslation, dateUtils) {
+api.controller = function ($scope, nowAttachmentHandler, $animate, $rootScope, cabrillo, $timeout, snRecordWatcher, spUtil, spAriaUtil, $http, $window, $sce, snAttachmentHandler, i18n, dynamicTranslation, dateUtils) {
     // KLF ADDITION
     // Flag that will expand the items on the timeline to fill te entire horizontal
     // space of the timeline as opposed to only taking up 50% of the space.

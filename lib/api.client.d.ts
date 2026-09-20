@@ -12,6 +12,7 @@ declare var GlideOverlay: any;
 declare var triggerAction: any;
 declare var loadForm: any;
 declare var g_scratchpad: any;
+declare var api: any;
 
 declare function addRenderEvent(callback: () => void): void;
 

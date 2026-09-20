@@ -4,7 +4,7 @@ SPWidget({
     $id: Now.ID['4f50c194478c121058ceeb02d16d434d'],
     name: 'KLF Ticket Conversations',
     category: 'standard',
-    clientScript: Now.include('./sp_widget_klf_ticket_conversations/script.client.js'),
+    clientScript: Now.include('./sp_widget_klf_ticket_conversations/script.client.nocheck.js'),
     serverScript: Now.include('./sp_widget_klf_ticket_conversations/script.server.js'),
     htmlTemplate: Now.include('./sp_widget_klf_ticket_conversations/template.html'),
     customCss: Now.include('./sp_widget_klf_ticket_conversations/style.scss'),

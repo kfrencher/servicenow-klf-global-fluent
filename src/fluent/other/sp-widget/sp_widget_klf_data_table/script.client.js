@@ -1,3 +1,5 @@
+api.controller = function() {};
+
 /**
  * @param {angular.IScope & Object.<string, *>} $scope
  * @param {angular.ILocationService} $location
@@ -10,7 +12,7 @@
  * @param {*} spNavStateManager
  * @param {*} i18n
  */
-function controller($scope, $location, $window, spUtil, amb, $http, spAriaUtil, $timeout, spNavStateManager, i18n) {
+api.controller = function ($scope, $location, $window, spUtil, amb, $http, spAriaUtil, $timeout, spNavStateManager, i18n) {
     /** @type {this & {data: any}} */
     // @ts-ignore
     var c = this;
