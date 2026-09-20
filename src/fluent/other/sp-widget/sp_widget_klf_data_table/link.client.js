@@ -1,17 +1,25 @@
+/**
+ * 
+ * @param {angular.IScope & Object.<string, *>} scope
+ * @param {JQuery<HTMLElement> & angular.IAugmentedJQuery} element 
+ * @param {*} attrs 
+ * @param {*} ctrl 
+ */
 function link(scope, element, attrs, ctrl){
-	var $ul, $contextMenu;
+	
+	var /** @type {angular.IAugmentedJQuery} */$ul, /** @type {angular.IAugmentedJQuery} */$contextMenu;
 
 	scope.focusOnTableHeader = function() {
 		element.find(".data-table-title").attr("tabindex", "-1").focus();
 	};
 
-	element.on('contextmenu', function(e){
+	element.on('contextmenu', function(/** @type {JQueryEventObject} */ e){
 		if (e.ctrlKey)
 			return; // ctrlKey is for the debug menu, not this menu
 
 		/** @type {any} */
-		var rowScope = angular.element(e.target).scope();
-		var field, item, fieldVal;
+		var rowScope = angular.element(/** @type {HTMLElement} */ (e.target)).scope();
+		var /** @type {string} */ field, /** @type {any} */ item, fieldVal;
 
 		// Context Menu for tbody
 		if (angular.isDefined(rowScope.field) && angular.isDefined(rowScope.item)){
@@ -22,12 +30,12 @@ function link(scope, element, attrs, ctrl){
 
 			var items = [
 				['${Show Matching}', function(){
-					ctrl.createQueryTerm(scope.data.table, field, item.sys_id, '=').then(function(term){
+					ctrl.createQueryTerm(scope.data.table, field, item.sys_id, '=').then(function(/** @type {*} */ term){
 						ctrl.showMatching(field, term);
 					});
 				}],
 				['${Filter Out}', function(){
-					ctrl.createQueryTerm(scope.data.table, field, item.sys_id, '!=').then(function(term){
+					ctrl.createQueryTerm(scope.data.table, field, item.sys_id, '!=').then(function(/** @type {*} */ term){
 						ctrl.filterOut(field, term);
 					});
 				}]
@@ -38,12 +46,13 @@ function link(scope, element, attrs, ctrl){
 		}
 	});
 
-	function renderContextMenu(items){
+	function renderContextMenu(/** @type {*} */ items){
+		// @ts-ignore: scrollHeight might be undefined in some environments
 		var scrollHeight = $('body').get(0).scrollHeight;
 		$contextMenu = angular.element('<div>', {'class': 'dropdown clearfix context-dropdown open'});
 
-		$contextMenu.on('click', function (e) {
-			if ($(e.target).hasClass('dropdown')) {
+		$contextMenu.on('click', function (event) {
+			if ($(/** @type {HTMLElement} */ (event.target)).hasClass('dropdown')) {
 				_clearContextMenus(event);
 			}
 		});
@@ -95,8 +104,12 @@ function link(scope, element, attrs, ctrl){
 		}
 	}
 
-	function _clearContextMenus(event){
+	function _clearContextMenus(/** @type {JQuery.TriggeredEvent} */ event){
 		if (!event){
+			return;
+		}
+
+		if(!event.currentTarget){
 			return;
 		}
 
@@ -109,9 +122,9 @@ function link(scope, element, attrs, ctrl){
 	}
 
 	var contextMenuItemHeight = 0;
-	function setContextMenuPosition(event){
+	function setContextMenuPosition(/** @type {JQueryEventObject} */ event){
 		if (contextMenuItemHeight === 0)
-			contextMenuItemHeight = $ul.children(0).height();
+			contextMenuItemHeight = $ul.children(0).height() || 0;
 
 		// Why not just call .width() and .height() on the container? Because those calculations cause browsers to reflow
 		// that can cause IE10 to take 200ms to render a context menu.

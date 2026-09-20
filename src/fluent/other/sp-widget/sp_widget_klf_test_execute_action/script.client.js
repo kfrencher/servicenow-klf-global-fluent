@@ -1,4 +1,9 @@
-api.controller = function ($scope, spUtil, uiActionExecutor) {
+/**
+ * @param {angular.IScope & Object.<string, *>} $scope
+ * @param {*} spUtil
+ * @param {*} uiActionExecutor 
+ */
+function controller($scope, spUtil, uiActionExecutor) {
 	
 	$scope.executeAction = async function () {
 		spUtil.addInfoMessage('Executing action');

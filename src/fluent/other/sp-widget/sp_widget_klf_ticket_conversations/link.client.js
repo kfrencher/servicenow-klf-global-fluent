@@ -1,3 +1,7 @@
+/**
+ * @param {angular.IScope & Object.<string, *>} scope
+ * @param {JQuery<HTMLElement>} elm 
+ */
 function link(scope, elm) {
 	// Set the focus back on the input for IE11
 	scope.setFocus = function() {

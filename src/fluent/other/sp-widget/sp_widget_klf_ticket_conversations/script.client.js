@@ -1,3 +1,17 @@
+// @ts-nocheck
+
+/**
+ * @param {angular.IScope & Object.<string, *>} $scope
+ * @param {*} nowAttachmentHandler
+ * @param {*} $animate
+ * @param {angular.IRootScopeService} $rootScope
+ * @param {*} cabrillo
+ * @param {*} snRecordWatcher
+ * @param {*} spUtil
+ * @param {*} spAriaUtil
+ * @param {*} $http
+ * @param {*} $window
+ */
 function spTicketConversation($scope, nowAttachmentHandler, $animate, $rootScope, cabrillo, $timeout, snRecordWatcher, spUtil, spAriaUtil, $http, $window, $sce, snAttachmentHandler, i18n, dynamicTranslation, dateUtils) {
     // KLF ADDITION
     // Flag that will expand the items on the timeline to fill te entire horizontal

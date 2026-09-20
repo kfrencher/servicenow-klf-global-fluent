@@ -9,7 +9,7 @@
     ],
     "compilerOptions": {
         "rootDir": "./src",
-        "types": ["angular"],
+        "types": ["angular","jquery"],
         "module": "esnext",
         "target": "es2020",
         "allowJs": true,

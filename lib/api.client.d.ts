@@ -3,7 +3,6 @@ declare var _oswWindow: any;
 declare var _klfWindow: any;
 declare var _klfSpWindow: any;
 declare var classification: any;
-declare var jQuery: any;
 declare var g_ui_testing_util: any;
 declare var g_lang: any;
 declare var g_tz_offset: any;

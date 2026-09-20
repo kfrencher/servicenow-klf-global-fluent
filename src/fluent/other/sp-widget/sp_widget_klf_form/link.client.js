@@ -1,5 +1,6 @@
-function link(){
-	setTimeout(function(){
-	$('#adminMenu, #platformLink').tooltip();
-});
+function link() {
+  setTimeout(function () {
+		// @ts-ignore
+    $('#adminMenu, #platformLink').tooltip();
+  });
 }
