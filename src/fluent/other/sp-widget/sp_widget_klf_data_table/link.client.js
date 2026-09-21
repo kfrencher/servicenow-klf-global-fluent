@@ -123,8 +123,10 @@ function link(scope, element, attrs, ctrl){
 
 	var contextMenuItemHeight = 0;
 	function setContextMenuPosition(/** @type {JQueryEventObject} */ event){
-		if (contextMenuItemHeight === 0)
+		if (contextMenuItemHeight === 0) {
+			//@ts-ignore
 			contextMenuItemHeight = $ul.children(0).height() || 0;
+		}
 
 		// Why not just call .width() and .height() on the container? Because those calculations cause browsers to reflow
 		// that can cause IE10 to take 200ms to render a context menu.
