@@ -171,6 +171,9 @@
 
     data.tableLabel = gr.getLabel();
 
+    /**
+     * @param {GlideRecord} originalRecord 
+     */
     function userCanAttach(originalRecord) {
         if (!gs.hasRole(gs.getProperty("glide.attachment.role")))
             return false;

@@ -13,11 +13,7 @@ Test(
         atf.server.runServerSideScript({
             $id: Now.ID['95c4368e833c36103c9299e0deaad3cc'],
             description: 'Run Server Side Validation Script',
-            script: `KLF_TestJasmineMatchers(global);
-
-KLF_CalendarCreatorTest(outputs, steps, params, stepResult, assertEqual);
-
-jasmine.getEnv().execute();`,
+            script: Now.include('./klf_calendarcreatortest.test.server.js'),
         })
     }
 )

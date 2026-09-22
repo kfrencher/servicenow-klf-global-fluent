@@ -153,6 +153,7 @@
 
 	data.list = [];
 	while (gr._next()) {
+		/** @type {Record<string, any>} */
 		var record = {};
 		$sp.getRecordElements(record, gr, data.fields);
 		if (typeof FilteredGlideRecord != "undefined" && gr instanceof FilteredGlideRecord) {
@@ -184,6 +185,9 @@
 	data.filterBreadcrumbs = $sp.getWidget('widget-filter-breadcrumbs', breadcrumbWidgetParams);
 
 	// copy to data from input or options
+	/**
+	 * @param {string[]} names 
+	 */
 	function optCopy(names) {
 		names.forEach(function(name) {
 			data[name] = input[name] || options[name];

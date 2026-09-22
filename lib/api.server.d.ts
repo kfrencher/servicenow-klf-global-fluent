@@ -1,3 +1,13 @@
+type Document = import('@xmldom/xmldom').Document;
+type Node = import('@xmldom/xmldom').Node;
+
+declare var KLF_TestJasmineMatchers: (namespace: any) => void;
+declare var outputs:unknown;
+declare var steps: unknown;
+declare var params: unknown;
+declare var stepResult: unknown;
+declare var assertEqual: unknown;
+declare var g_scratchpad: Record<string, any>;
 declare var request: unknown;
 declare var response: unknown;
 declare var $: any;
