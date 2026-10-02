@@ -18,7 +18,7 @@
     },
     "devDependencies": {
         "@servicenow/glide": "27.0.5",
-        "@servicenow/sdk": "4.12.2",
+        "@servicenow/sdk": "^4.13.3",
         "@types/angular": "^1.8.4",
         "@types/chance": "^1.1.6",
         "@types/jasmine": "3.3.0",
