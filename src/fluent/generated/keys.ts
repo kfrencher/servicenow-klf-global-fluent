@@ -444,6 +444,10 @@ declare global {
                         table: 'sys_script_include'
                         id: '7da4a486c4ba221020d2af62322a08ba'
                     }
+                    '7deea01883a30f103c9299e0deaad357': {
+                        table: 'sys_atf_schedule'
+                        id: '7deea01883a30f103c9299e0deaad357'
+                    }
                     '7f2497eb97ace150b2e1f97e6253af02': {
                         table: 'sys_atf_step'
                         id: '7f2497eb97ace150b2e1f97e6253af02'
@@ -459,6 +463,10 @@ declare global {
                     '82b7058897b86550b2e1f97e6253afa2': {
                         table: 'sys_script_include'
                         id: '82b7058897b86550b2e1f97e6253afa2'
+                    }
+                    '82eee0dc83a30f103c9299e0deaad323': {
+                        table: 'sys_atf_schedule_run'
+                        id: '82eee0dc83a30f103c9299e0deaad323'
                     }
                     '833885444718161058ceeb02d16d4302': {
                         table: 'sys_atf_step'
@@ -1117,7 +1125,7 @@ declare global {
                     {
                         table: 'sys_dictionary'
                         id: '14870edf8a094a5eb78a285e6f5649ec'
-                        deleted: false
+                        deleted: true
                         key: {
                             name: 'sys_atf_test'
                             element: 'NULL'
@@ -3072,7 +3080,7 @@ declare global {
                     {
                         table: 'sys_index'
                         id: '8f93b5e2dd8b4b6882aaf56d1a2a938f'
-                        deleted: false
+                        deleted: true
                         key: {
                             logical_table_name: 'u_klf_recordimporter_state'
                             col_name_string: 'u_name'
