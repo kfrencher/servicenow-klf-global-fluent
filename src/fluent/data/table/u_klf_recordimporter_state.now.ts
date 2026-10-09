@@ -76,4 +76,5 @@ export const u_klf_recordimporter_state = Table({
     allowClientScripts: false,
     allowNewFields: false,
     allowUiActions: false,
+    allowConfiguration: false
 })

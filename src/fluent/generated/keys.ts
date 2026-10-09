@@ -1117,7 +1117,7 @@ declare global {
                     {
                         table: 'sys_dictionary'
                         id: '14870edf8a094a5eb78a285e6f5649ec'
-                        deleted: true
+                        deleted: false
                         key: {
                             name: 'sys_atf_test'
                             element: 'NULL'
@@ -3072,7 +3072,7 @@ declare global {
                     {
                         table: 'sys_index'
                         id: '8f93b5e2dd8b4b6882aaf56d1a2a938f'
-                        deleted: true
+                        deleted: false
                         key: {
                             logical_table_name: 'u_klf_recordimporter_state'
                             col_name_string: 'u_name'
