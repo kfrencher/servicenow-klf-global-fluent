@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"command": "if defined DEPLOY_TARGET (npm run deploy -- -a \"%DEPLOY_TARGET%\") else (npm run deploy)",
+			"problemMatcher": [],
+			"label": "npm: deploy",
+			"detail": "now-sdk install with an optional target",
+			"options": {
+				"env": {
+					"DEPLOY_TARGET": "${input:deployTarget}"
+				}
+			}
+		}
+	],
+	"inputs": [
+		{
+			"id": "deployTarget",
+			"type": "promptString",
+			"description": "Deployment target (leave blank to use the default)",
+			"default": ""
+		}
+	]
+}
