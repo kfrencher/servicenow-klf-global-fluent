@@ -1,18 +1,22 @@
 # Global KLF Utilities
 
-These are script includes that execute in the `global` scope. They are used across applications. There is a brief description of each utility below. A more detailed description is included inside each script include.
-- [KLF Form Widget](#KLF_Form)
-- [KLF_AtfAddStepsHelper](#KLF_AtfAddStepsHelper)
-- [KLF_CalendarCreator](#KLF_CalendarCreator)
-- [KLF_CommandProbe](#KLF_CommandProbe)
-- [KLF_GlideRecordUtils](#KLF_GlideRecordUtils)
-- [KLF_GroupUtils](#KLF_GroupUtils)
-- [KLF_LdapGroupService](#KLF_LdapGroupService)
-- [KLF_MetricUtils](#KLF_MetricUtils)
-- [KLF_RecordSync](#KLF_RecordSync)
-- [KLF_ScoperUtils](#KLF_ScoperUtils)
-- [KLF_SPUtils](#KLF_SPUtils)
-- [KLF_TestUtils](#KLF_TestUtils)
+This is the ServiceNow Fluent source for the **KLF Global** application. Its primary library surface is the global Script Includes under `src/fluent/server-development/script-include/`; they are available to other applications as `global.KLF_*`. The sections below describe the main utilities at a high level; the adjacent `.server.js` files contain their implementation and API details.
+
+The application also includes supporting Service Portal widgets, scripted REST APIs, UI artifacts, system properties, and ATF tests. Fluent metadata is authored in `.now.ts` files and paired scripts are included during the SDK build.
+
+- [KLF Record Importer](./KLF_RecordImporter.md)
+- [KLF Form Widget](#klf-form-widget)
+- [KLF_AtfAddStepsHelper](#klf_atfaddstepshelper)
+- [KLF_CalendarCreator](#klf_calendarcreator)
+- [KLF_CommandProbe](#klf_commandprobe)
+- [KLF_GlideRecordUtils](#klf_gliderecordutils)
+- [KLF_GroupUtils](#klf_grouputils)
+- [KLF_LdapGroupService](#klf_ldapgroupservice)
+- [KLF_MetricUtils](#klf_metricutils)
+- [KLF_RecordSync](#klf_recordsync)
+- [KLF_ScoperUtils](#klf_scoperutils)
+- [KLF_SPUtils](#klf_sputils)
+- [KLF_TestUtils](#klf_testutils)
 
 ## KLF Form Widget
 
@@ -405,3 +409,19 @@ It includes functions that allow you to:
 - Impersonate the common user
 - Create a group, including adding users to the group
 - Create a user
+
+## Development Scripts
+
+Run the npm scripts from the repository root. Authenticate to a ServiceNow instance before commands that access it.
+
+| Script | Purpose |
+| --- | --- |
+| `npm run build` | Compile Fluent metadata into the deployable application artifacts. |
+| `npm run deploy` | Install the most recent successful build on the authenticated instance. |
+| `npm run build_and_deploy` | Build, then install the result. |
+| `npm run clean` | Remove SDK build output. |
+| `npm run types` | Download ServiceNow dependency and Glide type definitions. |
+| `npm run auth:list` | List configured ServiceNow SDK authentication profiles. |
+| `npm run transform` | Transform instance metadata into Fluent source without overwriting existing files. |
+| `npm run download` | Download instance metadata without overwriting existing files. |
+| `npm run concatenate:script-includes` | Produce `dist/x_klf_global.server.js` by concatenating non-test Script Include source files. |
