@@ -18,7 +18,7 @@ The application also includes supporting Service Portal widgets, scripted REST A
 - [KLF_SPUtils](#klf_sputils)
 - [KLF_TestUtils](#klf_testutils)
 
-## KLF Form Widget
+## [KLF Form Widget](./src/fluent/other/sp-widget/klf_form.now.ts)
 
 This widget was cloned from the OOB Form widget
 
@@ -80,7 +80,7 @@ Example:
 - Support for showing all audit entries in the ticket conversation widget. By default, the ticket conversation widget only shows comments and work notes. With this enhancement, all audit entries that are displayed in the platform UI will also be displayed in the ServicePortal widget.
 > ![Enhanced Activity Formatter](docs/activity_log.png)
 
-## KLF_SPUtils
+## [KLF_SPUtils](./src/fluent/server-development/script-include/klf_sputils.server.js)
 
 This script is used to implement some of the functionality in the **KLF Form** widget. It contains utility functions for ServicePortal that can be used across multiple widgets. The main functions of the functions in this script include:
 
@@ -94,16 +94,16 @@ configured to be displayed on a ServicePortal view.
 - setRedirectURL - Used in the form widget in ServicePortal to provide a redirect URL. This is to provide some standardization on
 how routing is performed in ServicePortal after a UI Action is executed.
 
-## KLF Data Table
+## [KLF Data Table](./src/fluent/other/sp-widget/klf_data_table.now.ts)
 - TODO: Add description of changes. I believe this is mostly adding support for having data table acting as a related list to a parent form. This is hiding the list if empty and using the sys_id of the parent widget as a filter for the data in the table.
 
-## KLF_AtfAddStepsHelper
+## [KLF_AtfAddStepsHelper](./src/fluent/server-development/script-include/klf_atfaddstepshelper.server.js)
 
 Contains utility functions for dynamically creating ATF tests. The original use case for these utility methods was to
 generate a baseline test template. Then using this script you could potentially generate copies of that template to
 quickly create new tests.
 
-## KLF_CalendarCreator
+## [KLF_CalendarCreator](./src/fluent/server-development/script-include/klf_calendarcreator.server.js)
 
 ServiceNow has a module called Business Calendar. Business Calendars are used to define time
 periods that are significant to the business that differ from the standard calendar year.
@@ -132,12 +132,12 @@ global.KLF_CalendarCreator.createFiscalYearNameEntries(1999, 2040);
 global.KLF_CalendarCreator.createFiscalYearEntries(1999, 2040);
 ```
 
-## KLF_CommandProbe
+## [KLF_CommandProbe](./src/fluent/server-development/script-include/klf_commandprobe.server.js)
 
 This script is used to send commands to a mid server. It provides a mechanism to send the command to the midserver and
 process the result of the command after the mid server executes the command
 
-## KLF_GlideRecordUtils
+## [KLF_GlideRecordUtils](./src/fluent/server-development/script-include/klf_gliderecordutils.server.js)
 
 This utility object provides a convenient way to execute GlideRecord operations from a scoped application
 on globally scoped tables. This is useful when you need to perform operations on tables that are restricted
@@ -146,7 +146,7 @@ to global scope.
 It also provides a function to transform a GlideRecord into a map. This is useful when you need to pass
 GlideRecord data to a client script. The map can be easily converted to JSON and passed to the client spt.
 
-## KLF_GroupUtils
+## [KLF_GroupUtils](./src/fluent/server-development/script-include/klf_grouputils.server.js)
 
 This script contains general functions that help with group management in ServiceNow.
 - getGroupByName: Retrieves the sys_user_group based on a group name or alias.
@@ -157,7 +157,7 @@ to a new group
 - syncChildGroupMembers: This will make the membership of the parent group equal to the membership of its child groups. Basically, it copies the child group membership
 into the parent group
 
-## KLF_LdapGroupService
+## [KLF_LdapGroupService](./src/fluent/server-development/script-include/klf_ldapgroupservice.server.js)
 
 This script is used to ingest groups from LDAP into ServiceNow. Depending on the configuration
 it can also properly ingest nested groups by recursively adding the members of nested groups
@@ -166,7 +166,7 @@ to the parent group.
 It can ingest a single group or multiple groups. It can also refresh the membership of multiple
 groups based on the group type names or sys_ids.
 
-## KLF_MetricUtils
+## [KLF_MetricUtils](./src/fluent/server-development/script-include/klf_metricutils.server.js)
 
 This script includes functions for working with metrics. Metrics are located in the Metrics module.
 They are used to generated data associated with a record so that it can be used in reports.
@@ -179,7 +179,7 @@ Some of the functions in this script are:
 - clearMetricsByRelatedRecord: Deletes all metric instances for a given record
 - queueMetricUpdate: Used in a business rule to queue the metric.update event. This is used when creating metrics on a table that doesn't extend Task
 
-## KLF_RecordSync
+## [KLF_RecordSync](./src/fluent/server-development/script-include/klf_recordsync.server.js)
 
 Object that provides methods to sync records between two ServiceNow instances
 
@@ -302,13 +302,13 @@ Example Usage:
 });
 ```
 
-#### KLF_RecordSync_UserUtils
+#### [KLF_RecordSync_UserUtils](./src/fluent/server-development/script-include/klf_recordsync_userutils.server.js)
 
 This is used with `KLF_RecordSync`. When transferring data between ServiceNow instances users referenced in the source data set may not exist 
 in the target instance. This utility contains functions to help manage the user data when transferring
 data between instancesKLF Data.
 
-#### KLF_RecordSync_GroupUtils
+#### [KLF_RecordSync_GroupUtils](./src/fluent/server-development/script-include/klf_recordsync_grouputils.server.js)
 
 When transferring data between ServiceNow instances groups referenced in the source data set may not exist 
 in the target instance. This utility contains functions to help manage the group data when transferring
@@ -319,7 +319,7 @@ With this utility you can:
 - ```syncGroups```: Sync the groups in the local system with the remote system
 - ```updateRemoteNotifications```: Update the group sys_ids in notifications that are transferred to the remote system
 
-## KLF_ScoperUtils
+## [KLF_ScoperUtils](./src/fluent/server-development/script-include/klf_scoperutils.server.js)
 Object used to copy application elements from one scope to another.
 This is useful when you want to duplicate a scoped application to a new scope.
 Without this object copying the application elements by hand would be a manual and error prone process.
@@ -395,7 +395,7 @@ while (metadataGr.next()) {
     scoper.copyMetadataBySysId(metadataGr.getUniqueValue());
 }
 ```
-## KLF_TestUtils
+## [KLF_TestUtils](./src/fluent/server-development/script-include/klf_testutils.server.js)
 
 This script include provides utility functions for unit testing.
 
